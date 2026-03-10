@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naukri Job Scraper</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="app-container">
+
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">🔍</div>
+                <h1>Naukri Data Extractor</h1>
+            </div>
+            <p>High-performance scraper mirroring the Apify actor.</p>
+        </header>
+
+        <main class="main-content">
+
+            <!-- Left Side: Control Form -->
+            <section class="control-panel card">
+                <h2>Scraper Configuration</h2>
+
+                <form id="scrape-form">
+
+                    <div class="form-group">
+                        <label for="keyword">Search Keyword <span class="required">*</span></label>
+                        <input type="text" id="keyword" name="keyword"
+                            placeholder='e.g., "software developer", "data analyst"' required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label for="max_jobs">Max Jobs</label>
+                            <input type="number" id="max_jobs" name="max_jobs" value="100" min="1">
+                        </div>
+                        <div class="form-group half">
+                            <label for="freshness">Freshness (Days)</label>
+                            <select id="freshness" name="freshness">
+                                <option value="all">All time</option>
+                                <option value="30">Last 30 days</option>
+                                <option value="15">Last 15 days</option>
+                                <option value="7">Last 7 days</option>
+                                <option value="3">Last 3 days</option>
+                                <option value="1">Last 24 hours</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label for="job_type">Job Type</label>
+                            <select id="job_type" name="job_type">
+                                <option value="job">Regular Job</option>
+                                <option value="internship">Internship</option>
+                            </select>
+                        </div>
+                        <div class="form-group half">
+                            <label>Output Filename Prefix</label>
+                            <input type="text" name="output_name" placeholder="naukri_jobs_export"
+                                value="naukri_jobs_export">
+                        </div>
+                    </div>
+
+                    <div class="form-group"
+                        style="background: rgba(80, 250, 123, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(80, 250, 123, 0.2);">
+                        <label for="cv_file" style="color: var(--accent-green);"><strong>✨ [Optional] Upload CV
+                                (PDF)</strong></label>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem;">We will calculate
+                            a Job Match percentage against the JD.</p>
+                        <input type="file" id="cv_file" name="cv_file" accept=".pdf"
+                            style="background: transparent; padding: 0; border: none; cursor: pointer;">
+                    </div>
+
+                    <details class="advanced-filters">
+                        <summary>Advanced Filters</summary>
+                        <div class="details-content">
+
+                            <div class="form-group checkbox-group"
+                                style="background: rgba(139, 233, 253, 0.05); border-color: rgba(139, 233, 253, 0.2);">
+                                <input type="checkbox" id="fetch_details" name="fetch_details" value="true">
+                                <label for="fetch_details" style="color: var(--accent-blue);"><strong>Detailed
+                                        Mode:</strong> Fetch full HTML job descriptions and AmbitionBox data</label>
+                            </div>
+
+                            <div class="filter-section">
+                                <label>Work Mode</label>
+                                <div class="checkbox-grid">
+                                    <label><input type="checkbox" name="workMode" value="remote"> Remote</label>
+                                    <label><input type="checkbox" name="workMode" value="hybrid"> Hybrid</label>
+                                    <label><input type="checkbox" name="workMode" value="office"> Office</label>
+                                    <label><input type="checkbox" name="workMode" value="temporary_wfh"> Temp
+                                        WFH</label>
+                                </div>
+                            </div>
+
+                            <div class="filter-section">
+                                <label>Top Cities</label>
+                                <div class="checkbox-grid">
+                                    <label><input type="checkbox" name="cities" value="11"> Bangalore</label>
+                                    <label><input type="checkbox" name="cities" value="4114"> Delhi / NCR</label>
+                                    <label><input type="checkbox" name="cities" value="134"> Gurgaon</label>
+                                    <label><input type="checkbox" name="cities" value="17"> Mumbai</label>
+                                    <label><input type="checkbox" name="cities" value="18"> Pune</label>
+                                    <label><input type="checkbox" name="cities" value="15"> Hyderabad</label>
+                                    <label><input type="checkbox" name="cities" value="12"> Chennai</label>
+                                    <label><input type="checkbox" name="cities" value="16"> Kolkata</label>
+                                </div>
+                                <input type="text" name="other_cities" placeholder="Other City IDs (comma separated)"
+                                    style="margin-top: 5px;">
+                            </div>
+
+                            <div class="filter-section">
+                                <label>Company Type</label>
+                                <div class="checkbox-grid">
+                                    <label><input type="checkbox" name="companyType" value="213"> Foreign MNC</label>
+                                    <label><input type="checkbox" name="companyType" value="214"> Indian MNC</label>
+                                    <label><input type="checkbox" name="companyType" value="211"> Corporate</label>
+                                    <label><input type="checkbox" name="companyType" value="215"> Startup</label>
+                                </div>
+                            </div>
+
+                            <div class="filter-section">
+                                <label>Department / Domain</label>
+                                <div class="checkbox-grid">
+                                    <label><input type="checkbox" name="department" value="11"> Engineering -
+                                        Software</label>
+                                    <label><input type="checkbox" name="department" value="14"> Data Science</label>
+                                    <label><input type="checkbox" name="department" value="10"> Electronics</label>
+                                    <label><input type="checkbox" name="department" value="9"> IT & Info Sec</label>
+                                    <label><input type="checkbox" name="department" value="1"> Sales & BD</label>
+                                    <label><input type="checkbox" name="department" value="2"> Marketing</label>
+                                </div>
+                            </div>
+
+                            <div class="form-row" style="margin-bottom: 0;">
+                                <div class="form-group half">
+                                    <label>Experience (Years)</label>
+                                    <input type="number" name="experience" placeholder="e.g. 5" min="0" max="30">
+                                </div>
+                                <div class="form-group half">
+                                    <label>Salary (Lakhs)</label>
+                                    <select name="salaryRange">
+                                        <option value="">Any</option>
+                                        <option value="0to3">0 to 3 Lakhs</option>
+                                        <option value="3to6">3 to 6 Lakhs</option>
+                                        <option value="6to10">6 to 10 Lakhs</option>
+                                        <option value="10to15">10 to 15 Lakhs</option>
+                                        <option value="15to25">15 to 25 Lakhs</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="filter-section">
+                                <label>Role Category</label>
+                                <div class="checkbox-grid">
+                                    <label><input type="checkbox" name="roleCategory" value="200"> Software
+                                        Development</label>
+                                    <label><input type="checkbox" name="roleCategory" value="139"> IT Project
+                                        Management</label>
+                                    <label><input type="checkbox" name="roleCategory" value="46"> DBA /
+                                        Datawarehousing</label>
+                                    <label><input type="checkbox" name="roleCategory" value="121"> DevOps</label>
+                                    <label><input type="checkbox" name="roleCategory" value="171"> Data Science /
+                                        Machine Learning</label>
+                                </div>
+                            </div>
+
+                            <div class="filter-section">
+                                <label>Industry</label>
+                                <div class="checkbox-grid">
+                                    <label><input type="checkbox" name="industry" value="350"> IT Services &
+                                        Consulting</label>
+                                    <label><input type="checkbox" name="industry" value="351"> Software Product</label>
+                                    <label><input type="checkbox" name="industry" value="97"> Fintech</label>
+                                    <label><input type="checkbox" name="industry" value="14"> BPO / Call Centre</label>
+                                </div>
+                            </div>
+
+                            <div class="filter-section">
+                                <label>Top Companies</label>
+                                <div class="checkbox-grid">
+                                    <label><input type="checkbox" name="topCompanies" value="16"> TCS</label>
+                                    <label><input type="checkbox" name="topCompanies" value="482"> Infosys</label>
+                                    <label><input type="checkbox" name="topCompanies" value="13"> Wipro</label>
+                                    <label><input type="checkbox" name="topCompanies" value="4"> Accenture</label>
+                                    <label><input type="checkbox" name="topCompanies" value="14"> Cognizant</label>
+                                </div>
+                            </div>
+
+                            <div class="filter-section">
+                                <label>Education</label>
+                                <div class="checkbox-grid">
+                                    <label><input type="checkbox" name="ugCourse" value="10"> B.Tech/B.E.</label>
+                                    <label><input type="checkbox" name="ugCourse" value="3"> B.Sc</label>
+                                    <label><input type="checkbox" name="pgCourse" value="32"> M.Tech</label>
+                                    <label><input type="checkbox" name="pgCourse" value="24"> MCA</label>
+                                </div>
+                            </div>
+
+                            <div class="filter-section hidden" id="internship-filters">
+                                <label>Internships</label>
+                                <div class="checkbox-grid" style="grid-template-columns: 1fr 1fr; align-items: start;">
+                                    <div>
+                                        <label style="display: block; font-size: 0.8rem; margin-bottom: 0.3rem;">Stipend
+                                            (Per Month)</label>
+                                        <select name="stipend"
+                                            style="width: 100%; border-radius: 4px; padding: 0.3rem;">
+                                            <option value="">Any Range</option>
+                                            <option value="1">Upto ₹10,000</option>
+                                            <option value="2">₹10,000 - ₹20,000</option>
+                                            <option value="3">₹20,000 - ₹30,000</option>
+                                            <option value="4">₹30,000 - ₹40,000</option>
+                                            <option value="5">Above ₹40,000</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label
+                                            style="display: block; font-size: 0.8rem; margin-bottom: 0.3rem;">Duration
+                                            (Months)</label>
+                                        <select name="duration"
+                                            style="width: 100%; border-radius: 4px; padding: 0.3rem;">
+                                            <option value="">Any Duration</option>
+                                            <option value="1">1 Month</option>
+                                            <option value="2">2 Months</option>
+                                            <option value="3">3 Months</option>
+                                            <option value="4">4 Months</option>
+                                            <option value="5">5 Months</option>
+                                            <option value="6">6 Months</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </details>
+
+                    <button type="submit" id="start-btn" class="btn-primary">
+                        <span class="btn-text">Start Scraping</span>
+                        <div class="loader hidden"></div>
+                    </button>
+
+                </form>
+            </section>
+
+            <!-- Right Side: Logs & Results -->
+            <section class="results-panel">
+
+                <div class="terminal card">
+                    <div class="terminal-header">
+                        <div class="dots">
+                            <span></span><span></span><span></span>
+                        </div>
+                        <p>Terminal Logs</p>
+                    </div>
+                    <div class="terminal-body" id="log-window">
+                        <div class="log-line info">Ready to start. Configure parameters and click Start Scraping.</div>
+                    </div>
+                </div>
+
+                <div class="download-section card hidden" id="download-panel">
+                    <h2>🎉 Scraping Complete!</h2>
+                    <p>Your data is ready for download.</p>
+                    <div class="download-buttons">
+                        <a href="#" id="btn-download-json" class="btn-download json" download>Download JSON</a>
+                        <a href="#" id="btn-download-csv" class="btn-download csv" download>Download CSV</a>
+                    </div>
+                </div>
+
+
+
+            </section>
+
+            <div class="table-container card hidden" id="results-table-container">
+                <h2 style="margin-bottom: 1rem;">Live Results Viewer</h2>
+                <div style="overflow-x: auto;">
+                    <table id="results-table">
+                        <thead>
+                            <tr>
+                                <th>Match %</th>
+                                <th>Role</th>
+                                <th>Company</th>
+                                <th>Experience</th>
+                                <th>Salary</th>
+                                <th>Work Mode</th>
+                                <th>Description Snippet</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- JavaScript populates rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
