@@ -53,6 +53,10 @@ def apply_to_job(driver, job):
         )
         
         btn_text = apply_btn.text.strip().lower()
+        if 'already applied' in btn_text:
+            print("Already applied in the past. Skipping.")
+            return "Already Applied"
+        
         if 'company site' in btn_text:
             print("Job requires applying on company site. Skipping for automation safety.")
             return "Skipped (Company Site)"

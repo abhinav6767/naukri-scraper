@@ -324,10 +324,20 @@ def download_file(filename):
 @app.route('/api/open_edge', methods=['POST'])
 def open_edge():
     try:
-        # We start Edge detached
-        # Adjust user-data-dir and msedge.exe path as needed for Windows
-        cmd = 'start msedge.exe --remote-debugging-port=9222 --user-data-dir="C:\\edge_debug"'
+        # Common locations for Microsoft Edge on Windows
+        edge_paths = [
+            r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"
+        ]
+        
+        # Find the first path that exists
+        edge_path = next((p for p in edge_paths if os.path.exists(p)), "msedge.exe")
+        
+        # We start Edge detached using the command shell
+        # 'start ""' ensures the quoted path isn't treated as a window title
+        cmd = f'start "" "{edge_path}" --remote-debugging-port=9222 --user-data-dir="C:\\edge_debug"'
         subprocess.Popen(cmd, shell=True)
+        
         return jsonify({"status": "success", "message": "Edge launched with debugging enabled."})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -375,4 +385,4 @@ def resume_apply(task_id):
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001, use_reloader=False)
+    app.run(debug=True, port=5001, use_reloader=True)

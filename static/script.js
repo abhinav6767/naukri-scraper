@@ -268,6 +268,39 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (btnResumeApply) btnResumeApply.classList.remove("hidden");
                     } else {
                         appendLog(msg);
+                        
+                        // Check if this log line is a result for a company site job
+                        // Example log: [RESULT] Google - Frontend Engineer: Skipped (Company Site)
+                        if (msg.startsWith("[RESULT]") && msg.includes("Company Site")) {
+                            try {
+                                const pureMsg = msg.replace("[RESULT]", "").trim();
+                                const dashInx = pureMsg.indexOf('-');
+                                const colonInx = pureMsg.lastIndexOf(':');
+                                
+                                if (dashInx !== -1 && colonInx !== -1 && dashInx < colonInx) {
+                                    const company = pureMsg.substring(0, dashInx).trim();
+                                    const title = pureMsg.substring(dashInx + 1, colonInx).trim();
+                                    
+                                    // Make the table container visible if it isn't already
+                                    document.getElementById("company-site-jobs-container").classList.remove("hidden");
+                                    
+                                    const tbody = document.getElementById("company-site-body");
+                                    const tr = document.createElement("tr");
+                                    
+                                    // Try to reconstruct a Google search link for the job
+                                    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(company + ' ' + title + ' careers')}`;
+                                    
+                                    tr.innerHTML = `
+                                        <td><strong>${title}</strong></td>
+                                        <td>${company}</td>
+                                        <td><a href="${searchUrl}" target="_blank" class="btn-primary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-decoration: none; display: inline-block;">Google Search 🔍</a></td>
+                                    `;
+                                    tbody.appendChild(tr);
+                                }
+                            } catch (e) {
+                                console.warn("Could not parse company site job for table:", e);
+                            }
+                        }
                     }
                 };
                 eventSource.addEventListener("end", async (event) => {

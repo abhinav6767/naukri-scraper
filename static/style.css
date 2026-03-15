@@ -4,16 +4,16 @@
     --bg-card: #1e2130;
     --bg-terminal: #090a0f;
     --border: #2a2d3e;
-    
+
     --text-main: #f8f8f2;
     --text-muted: #8b92a5;
-    
+
     --primary: #6272a4;
     --primary-hover: #7b8dc7;
     --accent-blue: #8be9fd;
     --accent-green: #50fa7b;
     --accent-pink: #ff79c6;
-    
+
     --radius: 12px;
     --transition: all 0.2s ease;
 }
@@ -135,7 +135,8 @@ select {
     transition: var(--transition);
 }
 
-input:focus, select:focus {
+input:focus,
+select:focus {
     outline: none;
     border-color: var(--accent-blue);
     box-shadow: 0 0 0 3px rgba(139, 233, 253, 0.15);
@@ -227,14 +228,16 @@ summary:hover {
 .loader {
     width: 20px;
     height: 20px;
-    border: 3px solid rgba(255,255,255,0.3);
+    border: 3px solid rgba(255, 255, 255, 0.3);
     border-radius: 50%;
     border-top-color: white;
     animation: spin 1s ease-in-out infinite;
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .hidden {
@@ -242,12 +245,20 @@ summary:hover {
 }
 
 /* TERMINAL WINDOW */
+
+
+.results-panel {
+    position: sticky;
+    top: 10px;
+}
+
 .terminal {
     padding: 0;
     overflow: hidden;
     height: 500px;
     display: flex;
     flex-direction: column;
+
 }
 
 .terminal-header {
@@ -269,9 +280,18 @@ summary:hover {
     height: 12px;
     border-radius: 50%;
 }
-.dots span:nth-child(1) { background: #ff5f56; }
-.dots span:nth-child(2) { background: #ffbd2e; }
-.dots span:nth-child(3) { background: #27c93f; }
+
+.dots span:nth-child(1) {
+    background: #ff5f56;
+}
+
+.dots span:nth-child(2) {
+    background: #ffbd2e;
+}
+
+.dots span:nth-child(3) {
+    background: #27c93f;
+}
 
 .terminal-header p {
     color: #6272a4;
@@ -294,23 +314,37 @@ summary:hover {
     word-break: break-all;
 }
 
-.log-line.info { color: var(--accent-blue); }
-.log-line.success { color: var(--accent-green); }
-.log-line.warn { color: #ffb86c; }
-.log-line.error { color: var(--accent-pink); }
+.log-line.info {
+    color: var(--accent-blue);
+}
+
+.log-line.success {
+    color: var(--accent-green);
+}
+
+.log-line.warn {
+    color: #ffb86c;
+}
+
+.log-line.error {
+    color: var(--accent-pink);
+}
 
 /* SCROLLBAR CUSTOMIZATION */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
+
 ::-webkit-scrollbar-track {
-    background: rgba(0,0,0,0.1);
+    background: rgba(0, 0, 0, 0.1);
 }
+
 ::-webkit-scrollbar-thumb {
     background: #44475a;
     border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
     background: var(--primary);
 }
@@ -362,13 +396,15 @@ summary:hover {
 
 .btn-download:hover {
     transform: translateY(-2px);
-    background: rgba(255,255,255,0.05);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 /* RESULTS TABLE */
 .table-container {
+    position: sticky;
     padding: 1.5rem;
-    grid-column: 1 / -1; /* Make table take full width of grid */
+    grid-column: 1 / -1;
+    /* Make table take full width of grid */
     margin-top: 1rem;
 }
 
@@ -378,21 +414,22 @@ summary:hover {
     font-size: 0.9rem;
 }
 
-#results-table th, #results-table td {
+#results-table th,
+#results-table td {
     border-bottom: 1px solid var(--border);
     padding: 0.75rem 1rem;
     text-align: left;
 }
 
 #results-table th {
-    background-color: rgba(255,255,255,0.05);
+    background-color: rgba(255, 255, 255, 0.05);
     color: var(--accent-blue);
     font-weight: 600;
     white-space: nowrap;
 }
 
 #results-table tr:hover {
-    background-color: rgba(255,255,255,0.02);
+    background-color: rgba(255, 255, 255, 0.02);
 }
 
 .match-badge {
@@ -402,15 +439,27 @@ summary:hover {
     display: inline-block;
 }
 
-.match-high { background: rgba(80, 250, 123, 0.2); color: var(--accent-green); }
-.match-med { background: rgba(255, 184, 108, 0.2); color: #ffb86c; }
-.match-low { background: rgba(255, 85, 85, 0.2); color: #ff5555; }
+.match-high {
+    background: rgba(80, 250, 123, 0.2);
+    color: var(--accent-green);
+}
+
+.match-med {
+    background: rgba(255, 184, 108, 0.2);
+    color: #ffb86c;
+}
+
+.match-low {
+    background: rgba(255, 85, 85, 0.2);
+    color: #ff5555;
+}
 
 /* RESPONSIVE */
 @media (max-width: 900px) {
     .main-content {
         grid-template-columns: 1fr;
     }
+
     .terminal {
         height: 400px;
     }
