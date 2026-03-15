@@ -6,6 +6,7 @@ import uuid
 import sys
 import contextlib
 import io
+import subprocess
 from flask import Flask, render_template, request, jsonify, Response, send_file
 from werkzeug.utils import secure_filename
 from datetime import datetime
@@ -14,6 +15,7 @@ from PyPDF2 import PdfReader
 # Import our scraper components
 from scraper import NaukriScraper
 from utils import save_to_json, save_to_csv, flatten_job_for_csv
+from apply_jobs import get_edge_driver, apply_to_job
 
 app = Flask(__name__)
 app.config['OUTPUT_FOLDER'] = os.path.dirname(os.path.abspath(__name__))
@@ -32,7 +34,10 @@ class QueueWriter(io.TextIOBase):
         self.orig = original_stream
 
     def write(self, message):
-        self.orig.write(message)
+        try:
+            self.orig.write(message)
+        except UnicodeEncodeError:
+            self.orig.write(message.encode('ascii', 'replace').decode('ascii'))
         self.orig.flush()
         if message:
             self.q.put(message)
@@ -40,6 +45,26 @@ class QueueWriter(io.TextIOBase):
 
     def flush(self):
         self.orig.flush()
+
+def get_applied_jobs_path():
+    return os.path.join(app.config['OUTPUT_FOLDER'], 'applied_jobs.json')
+
+def load_applied_jobs():
+    path = get_applied_jobs_path()
+    if os.path.exists(path):
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return []
+    return []
+
+def save_applied_job(job_id):
+    jobs = load_applied_jobs()
+    if job_id not in jobs:
+        jobs.append(job_id)
+        with open(get_applied_jobs_path(), 'w', encoding='utf-8') as f:
+            json.dump(jobs, f, indent=4)
 
 
 def run_scrape_task(task_id, params, cv_text=None):
@@ -108,6 +133,86 @@ def run_scrape_task(task_id, params, cv_text=None):
         
     except Exception as e:
         print(f"[ERROR] Scrape failed: {str(e)}", file=sys.stderr)
+        tasks[task_id]['status'] = 'error'
+        
+    finally:
+        # Restore standard output streams
+        sys.stdout = orig_stdout
+        sys.stderr = orig_stderr
+        q.put("===END_OF_STREAM===")
+
+
+def run_apply_task(task_id, job_ids, context_filename=None):
+    """Runs the apply job in a background thread and redirects logs to the queue"""
+    q = tasks[task_id]['queue']
+    
+    # Store the original streams
+    orig_stdout = sys.stdout
+    orig_stderr = sys.stderr
+    
+    # Redirect streams to our queue in this thread
+    sys.stdout = QueueWriter(q, orig_stdout)
+    sys.stderr = QueueWriter(q, orig_stderr)
+    
+    try:
+        print(f"[INFO] Starting Apply Task {task_id}")
+        print(f"[INFO] Looking for {len(job_ids)} jobs to apply to.")
+        
+        # Load the scraped jobs to get job details
+        jobs = []
+        if context_filename:
+            try:
+                filepath = os.path.join(app.config['OUTPUT_FOLDER'], context_filename)
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    jobs = json.load(f)
+            except Exception as e:
+                print(f"[ERROR] Could not read context file {context_filename}: {e}", file=sys.stderr)
+        else:
+            print("[WARN] No context filename provided. Falling back to default output.json/naukri_jobs.json if exists")
+            # fallback loading
+        
+        # Filter jobs based on what's already applied
+        applied_jobs = load_applied_jobs()
+        jobs_to_apply = [j for j in jobs if j.get('jobId') in job_ids and j.get('jobId') not in applied_jobs]
+        print(f"[INFO] Found {len(jobs_to_apply)} jobs to process (skipped {len(job_ids) - len(jobs_to_apply)} already applied).")
+        
+        driver = get_edge_driver()
+        if not driver:
+            print("[ERROR] Could not connect to Microsoft Edge (make sure it's running with debugging port 9222!)")
+            tasks[task_id]['status'] = 'error'
+            return
+            
+        print("[SUCCESS] Successfully connected to Microsoft Edge!")
+        
+        for idx, job in enumerate(jobs_to_apply):
+            job_status = apply_to_job(driver, job)
+            print(f"[RESULT] {job.get('companyName')} - {job.get('title')}: {job_status}")
+            
+            if job_status == "Questionnaire Detected":
+                print("[WARN] Stopping automation because manual intervention is required for a questionnaire.")
+                print("===PAUSED===")
+                tasks[task_id]['pause_event'].clear() # Ensure it's cleared before waiting
+                tasks[task_id]['pause_event'].wait()  # Block until /api/resume_apply is called
+                print(f"[INFO] Resuming automation after manual intervention...")
+                # By resuming, we assume the user successfully applied manually
+                job_status = "Success (Manual)"
+                
+            if "Success" in job_status or job_status == "Already Applied":
+                save_applied_job(job.get('jobId'))
+                
+            if idx < len(jobs_to_apply) - 1:
+                import time, random
+                wait_time = random.uniform(5, 8)
+                print(f"[INFO] Waiting {wait_time:.1f} seconds before next job...")
+                time.sleep(wait_time)
+                
+        print("\n[SUMMARY] Finished application attempt run.")
+        tasks[task_id]['status'] = 'completed'
+        
+    except Exception as e:
+        print(f"[ERROR] Apply failed: {str(e)}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
         tasks[task_id]['status'] = 'error'
         
     finally:
@@ -214,6 +319,59 @@ def download_file(filename):
     if os.path.exists(filepath):
         return send_file(filepath, as_attachment=True)
     return jsonify({"error": "File not found"}), 404
+
+
+@app.route('/api/open_edge', methods=['POST'])
+def open_edge():
+    try:
+        # We start Edge detached
+        # Adjust user-data-dir and msedge.exe path as needed for Windows
+        cmd = 'start msedge.exe --remote-debugging-port=9222 --user-data-dir="C:\\edge_debug"'
+        subprocess.Popen(cmd, shell=True)
+        return jsonify({"status": "success", "message": "Edge launched with debugging enabled."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/applied_jobs', methods=['GET'])
+def get_applied_jobs():
+    return jsonify(load_applied_jobs())
+
+
+@app.route('/api/start_apply', methods=['POST'])
+def start_apply():
+    data = request.json
+    job_ids = data.get('job_ids', [])
+    context_filename = data.get('context_filename', '')
+    
+    if not job_ids:
+        return jsonify({"error": "No job IDs provided"}), 400
+        
+    task_id = str(uuid.uuid4())
+    
+    tasks[task_id] = {
+        'status': 'running',
+        'queue': queue.Queue(),
+        'files': {},
+        'pause_event': threading.Event()
+    }
+    
+    # Run in background thread
+    thread = threading.Thread(target=run_apply_task, args=(task_id, job_ids, context_filename))
+    thread.daemon = True
+    thread.start()
+    
+    return jsonify({"task_id": task_id})
+
+
+@app.route('/api/resume_apply/<task_id>', methods=['POST'])
+def resume_apply(task_id):
+    if task_id not in tasks:
+        return jsonify({"error": "Task not found"}), 404
+        
+    # Unblock the background thread
+    tasks[task_id]['pause_event'].set()
+    return jsonify({"status": "resumed"})
 
 
 if __name__ == '__main__':
