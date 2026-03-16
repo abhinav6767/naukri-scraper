@@ -266,6 +266,17 @@ document.addEventListener("DOMContentLoaded", () => {
                         appendLog("Waiting for you to complete questionnaire... click Resume when done.", "warn");
                         btnStartApply.innerHTML = "⏸️ Paused (Questionnaire)";
                         if (btnResumeApply) btnResumeApply.classList.remove("hidden");
+                        
+                        const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+                        audio.play().catch(e => console.log("Audio play failed:", e));
+                        
+                        setTimeout(() => {
+                            if (confirm("Questionnaire paused. Press OK AFTER you have completed the questionnaire in Edge to resume applying.")) {
+                                if (btnResumeApply && !btnResumeApply.classList.contains("hidden")) {
+                                    btnResumeApply.click();
+                                }
+                            }
+                        }, 500);
                     } else {
                         appendLog(msg);
                         

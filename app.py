@@ -47,7 +47,9 @@ class QueueWriter(io.TextIOBase):
         self.orig.flush()
 
 def get_applied_jobs_path():
-    return os.path.join(app.config['OUTPUT_FOLDER'], 'applied_jobs.json')
+    data_dir = os.path.join(app.config['OUTPUT_FOLDER'], 'data')
+    os.makedirs(data_dir, exist_ok=True)
+    return os.path.join(data_dir, 'applied_jobs.json')
 
 def load_applied_jobs():
     path = get_applied_jobs_path()
@@ -162,7 +164,7 @@ def run_apply_task(task_id, job_ids, context_filename=None):
         jobs = []
         if context_filename:
             try:
-                filepath = os.path.join(app.config['OUTPUT_FOLDER'], context_filename)
+                filepath = os.path.join(app.config['OUTPUT_FOLDER'], 'data', context_filename)
                 with open(filepath, 'r', encoding='utf-8') as f:
                     jobs = json.load(f)
             except Exception as e:
@@ -184,18 +186,16 @@ def run_apply_task(task_id, job_ids, context_filename=None):
             
         print("[SUCCESS] Successfully connected to Microsoft Edge!")
         
+        deferred_jobs = []
+        
         for idx, job in enumerate(jobs_to_apply):
             job_status = apply_to_job(driver, job)
             print(f"[RESULT] {job.get('companyName')} - {job.get('title')}: {job_status}")
             
             if job_status == "Questionnaire Detected":
-                print("[WARN] Stopping automation because manual intervention is required for a questionnaire.")
-                print("===PAUSED===")
-                tasks[task_id]['pause_event'].clear() # Ensure it's cleared before waiting
-                tasks[task_id]['pause_event'].wait()  # Block until /api/resume_apply is called
-                print(f"[INFO] Resuming automation after manual intervention...")
-                # By resuming, we assume the user successfully applied manually
-                job_status = "Success (Manual)"
+                print(f"[WARN] Deferring questionnaire job: {job.get('companyName')} - {job.get('title')}")
+                deferred_jobs.append(job)
+                continue
                 
             if "Success" in job_status or job_status == "Already Applied":
                 save_applied_job(job.get('jobId'))
@@ -206,6 +206,31 @@ def run_apply_task(task_id, job_ids, context_filename=None):
                 print(f"[INFO] Waiting {wait_time:.1f} seconds before next job...")
                 time.sleep(wait_time)
                 
+        if deferred_jobs:
+            print(f"\n[INFO] Finished main list. Now processing {len(deferred_jobs)} deferred questionnaire jobs...")
+            for idx, job in enumerate(deferred_jobs):
+                print(f"\n[INFO] Re-applying to deferred job: {job.get('companyName')} - {job.get('title')}")
+                job_status = apply_to_job(driver, job)
+                print(f"[RESULT] {job.get('companyName')} - {job.get('title')}: {job_status}")
+                
+                if job_status == "Questionnaire Detected":
+                    print("[WARN] Stopping automation because manual intervention is required for a questionnaire.")
+                    print("===PAUSED===")
+                    tasks[task_id]['pause_event'].clear() # Ensure it's cleared before waiting
+                    tasks[task_id]['pause_event'].wait()  # Block until /api/resume_apply is called
+                    print(f"[INFO] Resuming automation after manual intervention...")
+                    # By resuming, we assume the user successfully applied manually
+                    job_status = "Success (Manual)"
+                    
+                if "Success" in job_status or job_status == "Already Applied":
+                    save_applied_job(job.get('jobId'))
+                    
+                if idx < len(deferred_jobs) - 1:
+                    import time, random
+                    wait_time = random.uniform(5, 8)
+                    print(f"[INFO] Waiting {wait_time:.1f} seconds before next job...")
+                    time.sleep(wait_time)
+                    
         print("\n[SUMMARY] Finished application attempt run.")
         tasks[task_id]['status'] = 'completed'
         
@@ -315,7 +340,7 @@ def check_status(task_id):
 @app.route('/api/download/<filename>')
 def download_file(filename):
     safe_filename = secure_filename(filename)
-    filepath = os.path.join(app.config['OUTPUT_FOLDER'], safe_filename)
+    filepath = os.path.join(app.config['OUTPUT_FOLDER'], 'data', safe_filename)
     if os.path.exists(filepath):
         return send_file(filepath, as_attachment=True)
     return jsonify({"error": "File not found"}), 404

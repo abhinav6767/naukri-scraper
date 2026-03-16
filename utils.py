@@ -27,7 +27,9 @@ def print_progress(current: int, target: int, total_available: int) -> None:
 
 def save_to_json(jobs: list[dict], filename: str) -> str:
     """Save jobs list to a pretty-printed JSON file."""
-    filepath = Path(f"{filename}.json")
+    data_dir = Path("data")
+    data_dir.mkdir(exist_ok=True)
+    filepath = data_dir / f"{filename}.json"
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(jobs, f, ensure_ascii=False, indent=2)
     return str(filepath.resolve())
@@ -74,7 +76,9 @@ def save_to_csv(flat_jobs: list[dict], filename: str) -> str:
     """Save flattened jobs to a CSV file."""
     if not flat_jobs:
         return ""
-    filepath = Path(f"{filename}.csv")
+    data_dir = Path("data")
+    data_dir.mkdir(exist_ok=True)
+    filepath = data_dir / f"{filename}.csv"
     # Collect all possible field names from all records
     fieldnames: list[str] = []
     seen: set[str] = set()
