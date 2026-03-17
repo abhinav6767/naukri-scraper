@@ -261,7 +261,9 @@ def start_scrape():
     params = request.form.to_dict(flat=False)
     
     # Flatten single-item lists for convenience, except for known array fields
-    array_fields = ['workMode', 'cities', 'department', 'companyType', 'roleCategory', 'industry', 'postedBy', 'topCompanies', 'ugCourse', 'pgCourse', 'stipend', 'duration']
+    array_fields = ['workMode', 'cities', 'department', 'companyType', 'roleCategory',
+                    'industry', 'postedBy', 'topCompanies', 'ugCourse', 'pgCourse',
+                    'stipend', 'duration', 'salaryRange']
     
     flat_params = {}
     for key, val in params.items():
@@ -269,7 +271,20 @@ def start_scrape():
             flat_params[key] = val
         else:
             flat_params[key] = val[0] if isinstance(val, list) and len(val) > 0 else ''
-            
+    
+    # Handle experience range slider → pass as single "experience" value (Naukri uses min)
+    exp_min = flat_params.pop('experienceMin', '0') or '0'
+    exp_max = flat_params.pop('experienceMax', '30') or '30'
+    try:
+        exp_min_int = int(exp_min)
+        exp_max_int = int(exp_max)
+        # Only set experience filter if the user changed from defaults (0 and 30)
+        if not (exp_min_int == 0 and exp_max_int == 30):
+            flat_params['experience'] = str(exp_min_int)
+            flat_params['experienceMax'] = str(exp_max_int)
+    except ValueError:
+        pass
+        
     # Handle the "other_cities" manual input by appending to the cities array
     if flat_params.get('other_cities'):
         other_cities = [c.strip() for c in flat_params['other_cities'].split(',') if c.strip()]

@@ -1,4 +1,32 @@
 document.addEventListener("DOMContentLoaded", () => {
+
+    // ── DUAL EXPERIENCE SLIDER ──────────────────────────────────────────────
+    const expMin = document.getElementById("exp-min");
+    const expMax = document.getElementById("exp-max");
+    const expMinLabel = document.getElementById("exp-min-label");
+    const expMaxLabel = document.getElementById("exp-max-label");
+    const rangeFill  = document.getElementById("range-fill");
+
+    function updateSlider() {
+        if (!expMin || !expMax) return;
+        let lo = parseInt(expMin.value);
+        let hi = parseInt(expMax.value);
+        // Prevent thumbs from crossing
+        if (lo > hi) { lo = hi; expMin.value = lo; }
+        if (hi < lo) { hi = lo; expMax.value = hi; }
+        const max = parseInt(expMin.max);
+        const pctLo = (lo / max) * 100;
+        const pctHi = (hi / max) * 100;
+        if (rangeFill)  { rangeFill.style.left = pctLo + "%"; rangeFill.style.width = (pctHi - pctLo) + "%"; }
+        if (expMinLabel) expMinLabel.innerHTML = `Min: <strong>${lo}</strong> yrs`;
+        if (expMaxLabel) expMaxLabel.innerHTML = `Max: <strong>${hi}</strong> yrs`;
+    }
+
+    if (expMin) expMin.addEventListener("input", updateSlider);
+    if (expMax) expMax.addEventListener("input", updateSlider);
+    updateSlider(); // set initial state
+    // ────────────────────────────────────────────────────────────────────────
+
     const form = document.getElementById("scrape-form");
     const startBtn = document.getElementById("start-btn");
     const loader = document.querySelector(".loader");
@@ -118,9 +146,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const tablesLayout = document.getElementById("tables-layout");
             if (tablesLayout) tablesLayout.classList.remove("hidden");
-            tableContainer.classList.remove("hidden");
             if (btnStartApply) btnStartApply.classList.remove("hidden");
             currentContextFilename = filename;
+
+            // Hide live results empty state if we have rows
+            const liveEmpty = document.getElementById("live-empty-state");
+            if (liveEmpty) liveEmpty.style.display = jobs.length > 0 ? "none" : "flex";
 
             // Add a small delay to let the DOM paint, then smooth scroll down
             setTimeout(() => {
@@ -138,9 +169,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // 1. Reset UI State
         downloadPanel.classList.add("hidden");
-        tableContainer.classList.add("hidden");
         logWindow.innerHTML = "";
         appendLog("Initializing scraper...", "info");
+
+        // Show all 3 table panels right away (they will show empty states)
+        const tablesLayout = document.getElementById("tables-layout");
+        if (tablesLayout) tablesLayout.classList.remove("hidden");
+        // Reset bodies
+        document.getElementById("table-body").innerHTML = "";
+        document.getElementById("questionnaire-body").innerHTML = "";
+        document.getElementById("company-site-body").innerHTML = "";
+        // Show empty states
+        const liveEmpty = document.getElementById("live-empty-state");
+        const qEmpty = document.getElementById("q-empty-state");
+        const cEmpty = document.getElementById("c-empty-state");
+        if (liveEmpty) liveEmpty.style.display = "flex";
+        if (qEmpty) qEmpty.style.display = "flex";
+        if (cEmpty) cEmpty.style.display = "flex";
 
         startBtn.disabled = true;
         btnText.innerHTML = `<div class="loader"></div> Scraping...`;
@@ -263,8 +308,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (data.status === "Questionnaire Detected") {
             if (mainRow) mainRow.remove();
             
-            qContainer.classList.remove("hidden");
-            
             // find snippet from global array
             const job = window.allScrapedJobs?.find(j => j.jobId === data.jobId) || {};
             const snippet = (job.shortDescription || job.jobDescription || "").replace(/<[^>]+>/g, '').substring(0, 100) + '...';
@@ -277,12 +320,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td style="max-width:300px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${snippet}">${snippet}</td>
             `;
             qTableBody.appendChild(tr);
+            // hide empty state
+            const qEmpty = document.getElementById("q-empty-state");
+            if (qEmpty) qEmpty.style.display = "none";
             lucide.createIcons();
             
         } else if (data.status.includes("Company Site")) {
             if (mainRow) mainRow.remove();
-            
-            cContainer.classList.remove("hidden");
             
             const tr = document.createElement("tr");
             tr.innerHTML = `
@@ -292,6 +336,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td><a href="${data.jdURL}" target="_blank" class="btn-primary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-decoration: none; display: inline-block;"><i data-lucide="external-link" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: text-bottom;"></i> Open Link</a></td>
             `;
             cTableBody.appendChild(tr);
+            // hide empty state
+            const cEmpty = document.getElementById("c-empty-state");
+            if (cEmpty) cEmpty.style.display = "none";
             lucide.createIcons();
             
         } else if (data.status.includes("Success") || data.status === "Already Applied") {

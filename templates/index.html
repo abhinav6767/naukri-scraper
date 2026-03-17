@@ -108,17 +108,18 @@
                                         Mode:</strong> Fetch full HTML job descriptions and AmbitionBox data</label>
                             </div>
 
+                            <!-- Work Mode (always visible) -->
                             <div class="filter-section">
                                 <label>Work Mode</label>
                                 <div class="checkbox-grid">
                                     <label><input type="checkbox" name="workMode" value="remote"> Remote</label>
                                     <label><input type="checkbox" name="workMode" value="hybrid"> Hybrid</label>
                                     <label><input type="checkbox" name="workMode" value="office"> Office</label>
-                                    <label><input type="checkbox" name="workMode" value="temporary_wfh"> Temp
-                                        WFH</label>
+                                    <label><input type="checkbox" name="workMode" value="temporary_wfh"> Temp WFH</label>
                                 </div>
                             </div>
 
+                            <!-- Cities (always visible) -->
                             <div class="filter-section">
                                 <label>Top Cities</label>
                                 <div class="checkbox-grid">
@@ -131,106 +132,138 @@
                                     <label><input type="checkbox" name="cities" value="12"> Chennai</label>
                                     <label><input type="checkbox" name="cities" value="16"> Kolkata</label>
                                 </div>
-                                <input type="text" name="other_cities" placeholder="Other City IDs (comma separated)"
-                                    style="margin-top: 5px;">
+                                <input type="text" name="other_cities" placeholder="Other City IDs (comma separated)" style="margin-top: 5px;">
                             </div>
 
+                            <!-- ── EXPERIENCE RANGE SLIDER ── -->
                             <div class="filter-section">
-                                <label>Company Type</label>
+                                <label>Experience Range (Years)</label>
+                                <div class="exp-slider-wrap">
+                                    <div class="exp-slider-labels">
+                                        <span id="exp-min-label">Min: <strong>0</strong> yrs</span>
+                                        <span id="exp-max-label">Max: <strong>30</strong> yrs</span>
+                                    </div>
+                                    <div class="range-slider-container">
+                                        <div class="range-track">
+                                            <div class="range-fill" id="range-fill"></div>
+                                        </div>
+                                        <input type="range" id="exp-min" name="experienceMin" min="0" max="30" value="0" step="1" class="range-input range-lower">
+                                        <input type="range" id="exp-max" name="experienceMax" min="0" max="30" value="30" step="1" class="range-input range-upper">
+                                    </div>
+                                    <div class="exp-slider-ticks">
+                                        <span>0</span><span>5</span><span>10</span><span>15</span><span>20</span><span>25</span><span>30</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ── SALARY MULTI-SELECT ── -->
+                            <div class="filter-section">
+                                <label>Salary Range (Lakhs) <span style="font-size:0.75rem;color:var(--text-muted);">— select multiple</span></label>
                                 <div class="checkbox-grid">
+                                    <label><input type="checkbox" name="salaryRange" value="0to3"> 0 – 3 L</label>
+                                    <label><input type="checkbox" name="salaryRange" value="3to6"> 3 – 6 L</label>
+                                    <label><input type="checkbox" name="salaryRange" value="6to10"> 6 – 10 L</label>
+                                    <label><input type="checkbox" name="salaryRange" value="10to15"> 10 – 15 L</label>
+                                    <label><input type="checkbox" name="salaryRange" value="15to25"> 15 – 25 L</label>
+                                    <label><input type="checkbox" name="salaryRange" value="25to50"> 25 – 50 L</label>
+                                </div>
+                            </div>
+
+                            <!-- ── COLLAPSIBLE: Company Type ── -->
+                            <details class="filter-accordion">
+                                <summary class="filter-accordion-summary">
+                                    <i data-lucide="building-2" style="width:14px;height:14px;"></i> Company Type
+                                    <i data-lucide="chevron-down" class="acc-chevron" style="width:14px;height:14px;margin-left:auto;"></i>
+                                </summary>
+                                <div class="checkbox-grid" style="margin-top:0.6rem;">
                                     <label><input type="checkbox" name="companyType" value="213"> Foreign MNC</label>
                                     <label><input type="checkbox" name="companyType" value="214"> Indian MNC</label>
                                     <label><input type="checkbox" name="companyType" value="211"> Corporate</label>
                                     <label><input type="checkbox" name="companyType" value="215"> Startup</label>
                                 </div>
-                            </div>
+                            </details>
 
-                            <div class="filter-section">
-                                <label>Department / Domain</label>
-                                <div class="checkbox-grid">
-                                    <label><input type="checkbox" name="department" value="11"> Engineering -
-                                        Software</label>
+                            <!-- ── COLLAPSIBLE: Department ── -->
+                            <details class="filter-accordion">
+                                <summary class="filter-accordion-summary">
+                                    <i data-lucide="layers" style="width:14px;height:14px;"></i> Department / Domain
+                                    <i data-lucide="chevron-down" class="acc-chevron" style="width:14px;height:14px;margin-left:auto;"></i>
+                                </summary>
+                                <div class="checkbox-grid" style="margin-top:0.6rem;">
+                                    <label><input type="checkbox" name="department" value="11"> Engg – Software</label>
                                     <label><input type="checkbox" name="department" value="14"> Data Science</label>
                                     <label><input type="checkbox" name="department" value="10"> Electronics</label>
-                                    <label><input type="checkbox" name="department" value="9"> IT & Info Sec</label>
-                                    <label><input type="checkbox" name="department" value="1"> Sales & BD</label>
+                                    <label><input type="checkbox" name="department" value="9"> IT &amp; Info Sec</label>
+                                    <label><input type="checkbox" name="department" value="1"> Sales &amp; BD</label>
                                     <label><input type="checkbox" name="department" value="2"> Marketing</label>
                                 </div>
-                            </div>
+                            </details>
 
-                            <div class="form-row" style="margin-bottom: 0;">
-                                <div class="form-group half">
-                                    <label>Experience (Years)</label>
-                                    <input type="number" name="experience" placeholder="e.g. 5" min="0" max="30">
-                                </div>
-                                <div class="form-group half">
-                                    <label>Salary (Lakhs)</label>
-                                    <select name="salaryRange">
-                                        <option value="">Any</option>
-                                        <option value="0to3">0 to 3 Lakhs</option>
-                                        <option value="3to6">3 to 6 Lakhs</option>
-                                        <option value="6to10">6 to 10 Lakhs</option>
-                                        <option value="10to15">10 to 15 Lakhs</option>
-                                        <option value="15to25">15 to 25 Lakhs</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="filter-section">
-                                <label>Role Category</label>
-                                <div class="checkbox-grid">
-                                    <label><input type="checkbox" name="roleCategory" value="200"> Software
-                                        Development</label>
-                                    <label><input type="checkbox" name="roleCategory" value="139"> IT Project
-                                        Management</label>
-                                    <label><input type="checkbox" name="roleCategory" value="46"> DBA /
-                                        Datawarehousing</label>
+                            <!-- ── COLLAPSIBLE: Role Category ── -->
+                            <details class="filter-accordion">
+                                <summary class="filter-accordion-summary">
+                                    <i data-lucide="briefcase" style="width:14px;height:14px;"></i> Role Category
+                                    <i data-lucide="chevron-down" class="acc-chevron" style="width:14px;height:14px;margin-left:auto;"></i>
+                                </summary>
+                                <div class="checkbox-grid" style="margin-top:0.6rem;">
+                                    <label><input type="checkbox" name="roleCategory" value="200"> Software Dev</label>
+                                    <label><input type="checkbox" name="roleCategory" value="139"> IT Project Mgmt</label>
+                                    <label><input type="checkbox" name="roleCategory" value="46"> DBA / DWH</label>
                                     <label><input type="checkbox" name="roleCategory" value="121"> DevOps</label>
-                                    <label><input type="checkbox" name="roleCategory" value="171"> Data Science /
-                                        Machine Learning</label>
+                                    <label><input type="checkbox" name="roleCategory" value="171"> Data Science / ML</label>
                                 </div>
-                            </div>
+                            </details>
 
-                            <div class="filter-section">
-                                <label>Industry</label>
-                                <div class="checkbox-grid">
-                                    <label><input type="checkbox" name="industry" value="350"> IT Services &
-                                        Consulting</label>
+                            <!-- ── COLLAPSIBLE: Industry ── -->
+                            <details class="filter-accordion">
+                                <summary class="filter-accordion-summary">
+                                    <i data-lucide="factory" style="width:14px;height:14px;"></i> Industry
+                                    <i data-lucide="chevron-down" class="acc-chevron" style="width:14px;height:14px;margin-left:auto;"></i>
+                                </summary>
+                                <div class="checkbox-grid" style="margin-top:0.6rem;">
+                                    <label><input type="checkbox" name="industry" value="350"> IT Services &amp; Consulting</label>
                                     <label><input type="checkbox" name="industry" value="351"> Software Product</label>
                                     <label><input type="checkbox" name="industry" value="97"> Fintech</label>
                                     <label><input type="checkbox" name="industry" value="14"> BPO / Call Centre</label>
                                 </div>
-                            </div>
+                            </details>
 
-                            <div class="filter-section">
-                                <label>Top Companies</label>
-                                <div class="checkbox-grid">
+                            <!-- ── COLLAPSIBLE: Top Companies ── -->
+                            <details class="filter-accordion">
+                                <summary class="filter-accordion-summary">
+                                    <i data-lucide="star" style="width:14px;height:14px;"></i> Top Companies
+                                    <i data-lucide="chevron-down" class="acc-chevron" style="width:14px;height:14px;margin-left:auto;"></i>
+                                </summary>
+                                <div class="checkbox-grid" style="margin-top:0.6rem;">
                                     <label><input type="checkbox" name="topCompanies" value="16"> TCS</label>
                                     <label><input type="checkbox" name="topCompanies" value="482"> Infosys</label>
                                     <label><input type="checkbox" name="topCompanies" value="13"> Wipro</label>
                                     <label><input type="checkbox" name="topCompanies" value="4"> Accenture</label>
                                     <label><input type="checkbox" name="topCompanies" value="14"> Cognizant</label>
                                 </div>
-                            </div>
+                            </details>
 
-                            <div class="filter-section">
-                                <label>Education</label>
-                                <div class="checkbox-grid">
+                            <!-- ── COLLAPSIBLE: Education ── -->
+                            <details class="filter-accordion">
+                                <summary class="filter-accordion-summary">
+                                    <i data-lucide="graduation-cap" style="width:14px;height:14px;"></i> Education
+                                    <i data-lucide="chevron-down" class="acc-chevron" style="width:14px;height:14px;margin-left:auto;"></i>
+                                </summary>
+                                <div class="checkbox-grid" style="margin-top:0.6rem;">
                                     <label><input type="checkbox" name="ugCourse" value="10"> B.Tech/B.E.</label>
                                     <label><input type="checkbox" name="ugCourse" value="3"> B.Sc</label>
                                     <label><input type="checkbox" name="pgCourse" value="32"> M.Tech</label>
                                     <label><input type="checkbox" name="pgCourse" value="24"> MCA</label>
                                 </div>
-                            </div>
+                            </details>
 
+                            <!-- Internship filters (shown only when internship selected) -->
                             <div class="filter-section hidden" id="internship-filters">
-                                <label>Internships</label>
+                                <label>Internship Options</label>
                                 <div class="checkbox-grid" style="grid-template-columns: 1fr 1fr; align-items: start;">
                                     <div>
-                                        <label style="display: block; font-size: 0.8rem; margin-bottom: 0.3rem;">Stipend
-                                            (Per Month)</label>
-                                        <select name="stipend"
-                                            style="width: 100%; border-radius: 4px; padding: 0.3rem;">
+                                        <label style="display: block; font-size: 0.8rem; margin-bottom: 0.3rem;">Stipend (Per Month)</label>
+                                        <select name="stipend" style="width: 100%; border-radius: 4px; padding: 0.3rem;">
                                             <option value="">Any Range</option>
                                             <option value="1">Upto ₹10,000</option>
                                             <option value="2">₹10,000 - ₹20,000</option>
@@ -240,11 +273,8 @@
                                         </select>
                                     </div>
                                     <div>
-                                        <label
-                                            style="display: block; font-size: 0.8rem; margin-bottom: 0.3rem;">Duration
-                                            (Months)</label>
-                                        <select name="duration"
-                                            style="width: 100%; border-radius: 4px; padding: 0.3rem;">
+                                        <label style="display: block; font-size: 0.8rem; margin-bottom: 0.3rem;">Duration (Months)</label>
+                                        <select name="duration" style="width: 100%; border-radius: 4px; padding: 0.3rem;">
                                             <option value="">Any Duration</option>
                                             <option value="1">1 Month</option>
                                             <option value="2">2 Months</option>
@@ -304,107 +334,127 @@
                     </div>
                 </div>
 
-
-
             </section>
 
 
             <div class="tables-layout hidden" id="tables-layout">
-                <div class="table-container card hidden" id="results-table-container">
+
+                <!-- LEFT: Live Results Viewer -->
+                <div class="table-container card" id="results-table-container">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                         <h2>Live Results Viewer</h2>
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <span id="timer-status" class="hidden"
-                            style="font-size: 0.9rem; margin-right: 10px; color: var(--color-cta);"></span>
-                        <button id="btn-pause-apply" type="button" class="btn-secondary hidden"
-                            style="border-color: #EF4444; color: #EF4444; padding: 0.5rem 1rem; width: auto;">
-                            <i data-lucide="pause" style="width: 16px; height: 16px;"></i> Pause
-                        </button>
-                        <button id="btn-resume-apply" type="button" class="btn-secondary hidden"
-                            style="border-color: var(--color-cta); color: var(--color-cta); padding: 0.5rem 1rem; width: auto;">
-                            <i data-lucide="play" style="width: 16px; height: 16px;"></i> Resume
-                        </button>
-                        <button id="btn-start-apply" type="button" class="btn-primary hidden"
-                            style="padding: 0.5rem 1rem; width: auto;">
-                            <i data-lucide="rocket" style="width: 16px; height: 16px;"></i> Apply
-                        </button>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <span id="timer-status" class="hidden"
+                                style="font-size: 0.9rem; margin-right: 10px; color: var(--color-cta);"></span>
+                            <button id="btn-pause-apply" type="button" class="btn-secondary hidden"
+                                style="border-color: #EF4444; color: #EF4444; padding: 0.5rem 1rem; width: auto;">
+                                <i data-lucide="pause" style="width: 16px; height: 16px;"></i> Pause
+                            </button>
+                            <button id="btn-resume-apply" type="button" class="btn-secondary hidden"
+                                style="border-color: var(--color-cta); color: var(--color-cta); padding: 0.5rem 1rem; width: auto;">
+                                <i data-lucide="play" style="width: 16px; height: 16px;"></i> Resume
+                            </button>
+                            <button id="btn-start-apply" type="button" class="btn-primary hidden"
+                                style="padding: 0.5rem 1rem; width: auto;">
+                                <i data-lucide="rocket" style="width: 16px; height: 16px;"></i> Apply
+                            </button>
+                        </div>
+                    </div>
+                    <div style="overflow-x: auto; flex: 1;">
+                        <table id="results-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"><input type="checkbox" id="select-all-jobs"></th>
+                                    <th>Match %</th>
+                                    <th>Role</th>
+                                    <th>Company</th>
+                                    <th>Experience</th>
+                                    <th>Salary</th>
+                                    <th>Work Mode</th>
+                                    <th>Description Snippet</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body">
+                                <!-- JavaScript populates rows -->
+                            </tbody>
+                        </table>
+                        <div id="live-empty-state" class="empty-table-state">
+                            <i data-lucide="search" style="width: 32px; height: 32px; opacity: 0.3;"></i>
+                            <p>Results will appear here after scraping</p>
+                        </div>
                     </div>
                 </div>
-                <div style="overflow-x: auto;">
-                    <table id="results-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 40px;"><input type="checkbox" id="select-all-jobs"></th>
-                                <th>Match %</th>
-                                <th>Role</th>
-                                <th>Company</th>
-                                <th>Experience</th>
-                                <th>Salary</th>
-                                <th>Work Mode</th>
-                                <th>Description Snippet</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-body">
-                            <!-- JavaScript populates rows -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
 
-            <div class="right-tables-column">
-                <div class="table-container card hidden" id="questionnaire-jobs-container">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h2 style="display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="clipboard-list"></i>
-                        Requires Questionnaire</h2>
-                    <button id="btn-apply-questionnaire" type="button" class="btn-secondary"
-                        style="padding: 0.5rem 1rem; width: auto;">
-                        <i data-lucide="check-square" style="width: 16px; height: 16px;"></i> Apply Selected
-                    </button>
-                </div>
-                <div style="overflow-x: auto;">
-                    <table id="questionnaire-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 40px;"><input type="checkbox" id="select-all-q-jobs"></th>
-                                <th>Role</th>
-                                <th>Company</th>
-                                <th>Description Snippet</th>
-                            </tr>
-                        </thead>
-                        <tbody id="questionnaire-body">
-                            <!-- Populated with jobs that require questionnaire -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                <!-- RIGHT: Stacked Tables -->
+                <div class="right-tables-column">
 
-            <div class="table-container card hidden" id="company-site-jobs-container">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h2 style="display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="external-link"></i>
-                        Manual Apply Needed (Company Site)</h2>
-                    <button id="btn-apply-company" type="button" class="btn-secondary"
-                        style="padding: 0.5rem 1rem; width: auto;">
-                        <i data-lucide="external-link" style="width: 16px; height: 16px;"></i> Open Links
-                    </button>
-                </div>
-                <div style="overflow-x: auto;">
-                    <table id="company-site-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 40px;"><input type="checkbox" id="select-all-c-jobs"></th>
-                                <th>Role</th>
-                                <th>Company</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="company-site-body">
-                            <!-- Populated with jobs that require manual application on the company site -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            </div> <!-- End right-tables-column -->
-            </div> <!-- End tables-layout -->
+                    <!-- Questionnaire Jobs -->
+                    <div class="table-container card" id="questionnaire-jobs-container">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h2 style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0;">
+                                <i data-lucide="clipboard-list"></i> Requires Questionnaire
+                            </h2>
+                            <button id="btn-apply-questionnaire" type="button" class="btn-secondary"
+                                style="padding: 0.5rem 1rem; width: auto;">
+                                <i data-lucide="check-square" style="width: 16px; height: 16px;"></i> Apply Selected
+                            </button>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table id="questionnaire-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;"><input type="checkbox" id="select-all-q-jobs"></th>
+                                        <th>Role</th>
+                                        <th>Company</th>
+                                        <th>Description Snippet</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="questionnaire-body">
+                                    <!-- Populated with jobs that require questionnaire -->
+                                </tbody>
+                            </table>
+                            <div id="q-empty-state" class="empty-table-state">
+                                <i data-lucide="inbox" style="width: 28px; height: 28px; opacity: 0.3;"></i>
+                                <p>No questionnaire jobs yet</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Company Site Jobs -->
+                    <div class="table-container card" id="company-site-jobs-container">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h2 style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0;">
+                                <i data-lucide="external-link"></i> Manual Apply (Company Site)
+                            </h2>
+                            <button id="btn-apply-company" type="button" class="btn-secondary"
+                                style="padding: 0.5rem 1rem; width: auto;">
+                                <i data-lucide="external-link" style="width: 16px; height: 16px;"></i> Open Links
+                            </button>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table id="company-site-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;"><input type="checkbox" id="select-all-c-jobs"></th>
+                                        <th>Role</th>
+                                        <th>Company</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="company-site-body">
+                                    <!-- Populated with jobs that require manual application on the company site -->
+                                </tbody>
+                            </table>
+                            <div id="c-empty-state" class="empty-table-state">
+                                <i data-lucide="inbox" style="width: 28px; height: 28px; opacity: 0.3;"></i>
+                                <p>No company site jobs yet</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- End right-tables-column -->
+
+            </div><!-- End tables-layout -->
         </main>
     </div>
 

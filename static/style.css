@@ -27,6 +27,10 @@
     --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.6);
 }
 
+html, body {
+    overflow-x: hidden;
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -54,9 +58,11 @@ h6,
 
 /* LAYOUT */
 .app-container {
-    max-width: 1200px;
+    max-width: 1400px;
+    width: 100%;
     margin: 0 auto;
     padding: 2rem;
+    box-sizing: border-box;
 }
 
 .header {
@@ -92,9 +98,10 @@ h6,
 
 .main-content {
     display: grid;
-    grid-template-columns: 400px 1fr;
-    gap: 2rem;
+    grid-template-columns: min(380px, 35%) 1fr;
+    gap: 1.5rem;
     align-items: flex-start;
+    min-width: 0;
 }
 
 /* CARDS */
@@ -300,9 +307,6 @@ summary:hover {
 
 /* TERMINAL WINDOW */
 
-
-.results-panel {}
-
 .terminal {
     padding: 0;
     overflow: hidden;
@@ -461,6 +465,9 @@ summary:hover {
     gap: 1.5rem;
     margin-top: 1.5rem;
     align-items: stretch;
+    min-width: 0;
+    width: 100%;
+    overflow: hidden;
 }
 
 .right-tables-column {
@@ -473,10 +480,28 @@ summary:hover {
     padding: 1.5rem;
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
 }
 
-.table-container>div[style*="overflow-x: auto"] {
+.table-container > div[style*="overflow-x: auto"] {
     flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Make the live results table scrollable vertically within a fixed height */
+#results-table-container {
+    max-height: 600px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+#results-table-container > div[style*="overflow-x"] {
+    overflow-y: auto;
+    max-height: 520px;
 }
 
 #results-table {
@@ -497,7 +522,7 @@ summary:hover {
     color: var(--accent-blue);
     font-weight: 600;
     white-space: nowrap;
-
+    position: sticky;
     top: 0;
     backdrop-filter: blur(8px);
     z-index: 10;
@@ -505,6 +530,14 @@ summary:hover {
 
 #results-table tr:hover {
     background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Prevent description snippet column from blowing out table width */
+#results-table td:last-child {
+    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .match-badge {
@@ -530,6 +563,19 @@ summary:hover {
 }
 
 /* RESPONSIVE */
+
+/* Large screens: keep max-width sensible */
+@media (max-width: 1200px) {
+    .app-container {
+        padding: 1.5rem;
+    }
+
+    .tables-layout {
+        grid-template-columns: 1.4fr 1fr;
+    }
+}
+
+/* Medium screens: collapse control panel */
 @media (max-width: 900px) {
     .main-content {
         grid-template-columns: 1fr;
@@ -538,4 +584,374 @@ summary:hover {
     .terminal {
         height: 400px;
     }
+
+    .tables-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .right-tables-column {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .right-tables-column .table-container {
+        flex: 1 1 300px;
+        min-height: 180px;
+    }
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+    .app-container {
+        padding: 1rem;
+    }
+
+    .logo h1 {
+        font-size: 1.8rem;
+    }
+
+    .header {
+        margin-bottom: 1.5rem;
+    }
+
+    .card h2 {
+        font-size: 1.1rem;
+    }
+
+    #results-table th,
+    #results-table td,
+    #questionnaire-table th,
+    #questionnaire-table td,
+    #company-site-table th,
+    #company-site-table td {
+        padding: 0.55rem 0.65rem;
+        font-size: 0.82rem;
+    }
+
+    .right-tables-column {
+        flex-direction: column;
+    }
+
+    .right-tables-column .table-container {
+        flex: unset;
+        min-height: 180px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+    .app-container {
+        padding: 0.75rem;
+    }
+
+    .logo h1 {
+        font-size: 1.4rem;
+    }
+
+    .logo-icon {
+        font-size: 1.4rem;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+        font-size: 0.85rem;
+        padding: 0.6rem 1rem;
+    }
+
+    #results-table th,
+    #results-table td,
+    #questionnaire-table th,
+    #questionnaire-table td,
+    #company-site-table th,
+    #company-site-table td {
+        padding: 0.45rem 0.5rem;
+        font-size: 0.78rem;
+    }
+
+    .table-container {
+        padding: 1rem;
+    }
+
+    .card {
+        padding: 1rem;
+    }
+
+    .tables-layout {
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+}
+
+/* Very small mobile */
+@media (max-width: 480px) {
+    .app-container {
+        padding: 0.5rem;
+    }
+
+    .main-content {
+        gap: 0.75rem;
+    }
+
+    .logo h1 {
+        font-size: 1.2rem;
+    }
+}
+
+/* EMPTY TABLE STATE */
+.empty-table-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 2.5rem 1rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.empty-table-state p {
+    margin: 0;
+    color: var(--text-muted);
+}
+
+/* Secondary tables (questionnaire / company site) */
+#questionnaire-table,
+#company-site-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+#questionnaire-table th,
+#questionnaire-table td,
+#company-site-table th,
+#company-site-table td {
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 1rem;
+    text-align: left;
+}
+
+#questionnaire-table th,
+#company-site-table th {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--accent-blue);
+    font-weight: 600;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    backdrop-filter: blur(8px);
+    z-index: 10;
+}
+
+#questionnaire-table tr:hover,
+#company-site-table tr:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Right stacked tables: each takes equal space */
+.right-tables-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.right-tables-column .table-container {
+    flex: 1;
+    min-height: 200px;
+    max-height: 340px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.right-tables-column .table-container > div[style*="overflow-x"] {
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* ── FILTER SECTION BASE ── */
+.filter-section {
+    margin-bottom: 1rem;
+}
+
+.filter-section > label:first-child {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ── FILTER ACCORDION ── */
+.filter-accordion {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+}
+
+.filter-accordion-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: rgba(255,255,255,0.02);
+    user-select: none;
+    list-style: none;
+    transition: background 150ms ease, color 150ms ease;
+}
+
+.filter-accordion-summary::-webkit-details-marker { display: none; }
+
+.filter-accordion-summary:hover {
+    background: rgba(59, 130, 246, 0.08);
+    color: var(--accent-blue);
+}
+
+.filter-accordion[open] .filter-accordion-summary {
+    color: var(--accent-blue);
+    background: rgba(59, 130, 246, 0.06);
+    border-bottom: 1px solid var(--border);
+}
+
+.filter-accordion[open] .acc-chevron {
+    transform: rotate(180deg);
+}
+
+.acc-chevron {
+    transition: transform 200ms ease;
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+.filter-accordion > .checkbox-grid {
+    padding: 0.5rem 0.75rem 0.75rem;
+}
+
+/* ── CHECKBOX GRID ── */
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.3rem 0.5rem;
+}
+
+.checkbox-grid label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--text-main);
+    cursor: pointer;
+    padding: 0.25rem 0.4rem;
+    border-radius: 4px;
+    transition: background 120ms;
+    margin-bottom: 0;
+}
+
+.checkbox-grid label:hover {
+    background: rgba(59,130,246,0.06);
+}
+
+.checkbox-grid input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--accent-blue);
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+/* ── DUAL RANGE SLIDER ── */
+.exp-slider-wrap {
+    padding: 0.25rem 0.25rem 0;
+}
+
+.exp-slider-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 0.6rem;
+}
+
+.exp-slider-labels strong {
+    color: var(--accent-blue);
+}
+
+.range-slider-container {
+    position: relative;
+    height: 24px;
+    display: flex;
+    align-items: center;
+}
+
+.range-track {
+    position: absolute;
+    width: 100%;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    z-index: 1;
+}
+
+.range-fill {
+    position: absolute;
+    height: 100%;
+    background: var(--accent-blue);
+    border-radius: 2px;
+}
+
+.range-input {
+    position: absolute;
+    width: 100%;
+    height: 4px;
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    pointer-events: none;
+    z-index: 2;
+    border: none;
+    padding: 0;
+}
+
+.range-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent-blue);
+    border: 2px solid var(--bg-card);
+    cursor: pointer;
+    pointer-events: all;
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.3);
+    transition: box-shadow 150ms;
+}
+
+.range-input::-webkit-slider-thumb:hover {
+    box-shadow: 0 0 0 5px rgba(59,130,246,0.25);
+}
+
+.range-input::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent-blue);
+    border: 2px solid var(--bg-card);
+    cursor: pointer;
+    pointer-events: all;
+}
+
+.exp-slider-ticks {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 0.4rem;
+    padding: 0 2px;
 }
