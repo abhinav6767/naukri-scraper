@@ -7,8 +7,12 @@
     <title>Naukri Job Scraper</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
 <body>
@@ -16,7 +20,7 @@
 
         <header class="header">
             <div class="logo">
-                <div class="logo-icon">🔍</div>
+                <i data-lucide="search-code" class="logo-icon"></i>
                 <h1>Naukri Data Extractor</h1>
             </div>
             <p>High-performance scraper mirroring the Apify actor.</p>
@@ -29,10 +33,10 @@
                 <h2>Scraper Configuration</h2>
 
                 <div
-                    style="margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center; background: rgba(139, 233, 253, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(139, 233, 253, 0.2);">
+                    style="margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center; background: rgba(59, 130, 246, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.2);">
                     <button id="btn-open-edge" type="button" class="btn-primary"
-                        style="background-color: #0078d7; width: auto; padding: 0.5rem 1rem;">
-                        🌐 Open Microsoft Edge
+                        style="background-color: transparent; border: 1px solid #3B82F6; color: #3B82F6; width: auto; padding: 0.5rem 1rem;">
+                        <i data-lucide="globe"></i> Open Microsoft Edge
                     </button>
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">
                         Opens Edge with debugging enabled required for the auto-apply bot.
@@ -81,9 +85,12 @@
                     </div>
 
                     <div class="form-group"
-                        style="background: rgba(80, 250, 123, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(80, 250, 123, 0.2);">
-                        <label for="cv_file" style="color: var(--accent-green);"><strong>✨ [Optional] Upload CV
-                                (PDF)</strong></label>
+                        style="background: rgba(245, 158, 11, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.2);">
+                        <label for="cv_file"
+                            style="color: var(--color-cta); display: flex; align-items: center; gap: 0.5rem;">
+                            <i data-lucide="file-check-2" style="width: 18px; height: 18px;"></i>
+                            <strong>[Optional] Upload CV (PDF)</strong>
+                        </label>
                         <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem;">We will calculate
                             a Job Match percentage against the JD.</p>
                         <input type="file" id="cv_file" name="cv_file" accept=".pdf"
@@ -95,9 +102,9 @@
                         <div class="details-content">
 
                             <div class="form-group checkbox-group"
-                                style="background: rgba(139, 233, 253, 0.05); border-color: rgba(139, 233, 253, 0.2);">
+                                style="background: rgba(59, 130, 246, 0.05); border-color: rgba(59, 130, 246, 0.2);">
                                 <input type="checkbox" id="fetch_details" name="fetch_details" value="true">
-                                <label for="fetch_details" style="color: var(--accent-blue);"><strong>Detailed
+                                <label for="fetch_details" style="color: var(--color-secondary);"><strong>Detailed
                                         Mode:</strong> Fetch full HTML job descriptions and AmbitionBox data</label>
                             </div>
 
@@ -253,10 +260,16 @@
                         </div>
                     </details>
 
-                    <button type="submit" id="start-btn" class="btn-primary">
-                        <span class="btn-text">Start Scraping</span>
-                        <div class="loader hidden"></div>
-                    </button>
+                    <div style="margin-top: 1.5rem; text-align: center;">
+                        <button type="submit" id="start-btn" class="btn-primary" style="margin: 0 auto;">
+                            <span class="btn-text"
+                                style="display: flex; align-items: center; gap: 0.5rem; justify-content: center;">
+                                <i data-lucide="play" style="width: 20px; height: 20px;"></i>
+                                Start Scraping
+                            </span>
+                            <div class="loader hidden"></div>
+                        </button>
+                    </div>
 
                 </form>
             </section>
@@ -277,11 +290,17 @@
                 </div>
 
                 <div class="download-section card hidden" id="download-panel">
-                    <h2>🎉 Scraping Complete!</h2>
+                    <h2><i data-lucide="party-popper"
+                            style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;"></i> Scraping
+                        Complete!</h2>
                     <p>Your data is ready for download.</p>
                     <div class="download-buttons">
-                        <a href="#" id="btn-download-json" class="btn-download json" download>Download JSON</a>
-                        <a href="#" id="btn-download-csv" class="btn-download csv" download>Download CSV</a>
+                        <a href="#" id="btn-download-json" class="btn-download json" download>
+                            <i data-lucide="file-json-2" style="width: 18px; height: 18px;"></i> Download JSON
+                        </a>
+                        <a href="#" id="btn-download-csv" class="btn-download csv" download>
+                            <i data-lucide="file-spreadsheet" style="width: 18px; height: 18px;"></i> Download CSV
+                        </a>
                     </div>
                 </div>
 
@@ -289,17 +308,25 @@
 
             </section>
 
-            <div class="table-container card hidden" id="results-table-container">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h2>Live Results Viewer</h2>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button id="btn-resume-apply" type="button" class="btn-primary hidden"
-                            style="background-color: #ffb86c; color: #000; padding: 0.5rem 1rem; width: auto;">
-                            ▶️ Resume Application
+
+            <div class="tables-layout hidden" id="tables-layout">
+                <div class="table-container card hidden" id="results-table-container">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h2>Live Results Viewer</h2>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span id="timer-status" class="hidden"
+                            style="font-size: 0.9rem; margin-right: 10px; color: var(--color-cta);"></span>
+                        <button id="btn-pause-apply" type="button" class="btn-secondary hidden"
+                            style="border-color: #EF4444; color: #EF4444; padding: 0.5rem 1rem; width: auto;">
+                            <i data-lucide="pause" style="width: 16px; height: 16px;"></i> Pause
+                        </button>
+                        <button id="btn-resume-apply" type="button" class="btn-secondary hidden"
+                            style="border-color: var(--color-cta); color: var(--color-cta); padding: 0.5rem 1rem; width: auto;">
+                            <i data-lucide="play" style="width: 16px; height: 16px;"></i> Resume
                         </button>
                         <button id="btn-start-apply" type="button" class="btn-primary hidden"
-                            style="background-color: var(--accent-green); color: #000; padding: 0.5rem 1rem; width: auto;">
-                            🚀 Start Applying
+                            style="padding: 0.5rem 1rem; width: auto;">
+                            <i data-lucide="rocket" style="width: 16px; height: 16px;"></i> Apply
                         </button>
                     </div>
                 </div>
@@ -324,14 +351,47 @@
                 </div>
             </div>
 
-            <div class="table-container card hidden" id="company-site-jobs-container" style="margin-top: 2rem;">
+            <div class="right-tables-column">
+                <div class="table-container card hidden" id="questionnaire-jobs-container">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h2 style="display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="clipboard-list"></i>
+                        Requires Questionnaire</h2>
+                    <button id="btn-apply-questionnaire" type="button" class="btn-secondary"
+                        style="padding: 0.5rem 1rem; width: auto;">
+                        <i data-lucide="check-square" style="width: 16px; height: 16px;"></i> Apply Selected
+                    </button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table id="questionnaire-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;"><input type="checkbox" id="select-all-q-jobs"></th>
+                                <th>Role</th>
+                                <th>Company</th>
+                                <th>Description Snippet</th>
+                            </tr>
+                        </thead>
+                        <tbody id="questionnaire-body">
+                            <!-- Populated with jobs that require questionnaire -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="table-container card hidden" id="company-site-jobs-container">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h2>🏢 Manual Apply Needed (Company Site)</h2>
+                    <h2 style="display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="external-link"></i>
+                        Manual Apply Needed (Company Site)</h2>
+                    <button id="btn-apply-company" type="button" class="btn-secondary"
+                        style="padding: 0.5rem 1rem; width: auto;">
+                        <i data-lucide="external-link" style="width: 16px; height: 16px;"></i> Open Links
+                    </button>
                 </div>
                 <div style="overflow-x: auto;">
                     <table id="company-site-table">
                         <thead>
                             <tr>
+                                <th style="width: 40px;"><input type="checkbox" id="select-all-c-jobs"></th>
                                 <th>Role</th>
                                 <th>Company</th>
                                 <th>Action</th>
@@ -343,9 +403,15 @@
                     </table>
                 </div>
             </div>
+            </div> <!-- End right-tables-column -->
+            </div> <!-- End tables-layout -->
         </main>
     </div>
 
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 

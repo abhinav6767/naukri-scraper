@@ -13,7 +13,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnOpenEdge = document.getElementById("btn-open-edge");
     const btnStartApply = document.getElementById("btn-start-apply");
     const btnResumeApply = document.getElementById("btn-resume-apply");
+    const btnPauseApply = document.getElementById("btn-pause-apply");
     const selectAllJobs = document.getElementById("select-all-jobs");
+    const selectAllQJobs = document.getElementById("select-all-q-jobs");
+    const selectAllCJobs = document.getElementById("select-all-c-jobs");
+    const btnApplyQuestionnaire = document.getElementById("btn-apply-questionnaire");
+    const btnApplyCompany = document.getElementById("btn-apply-company");
+    const qTableBody = document.getElementById("questionnaire-body");
+    const cTableBody = document.getElementById("company-site-body");
+    const qContainer = document.getElementById("questionnaire-jobs-container");
+    const cContainer = document.getElementById("company-site-jobs-container");
     let currentContextFilename = "";
     let currentApplyTaskId = null;
 
@@ -56,6 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const res = await fetch(`/api/download/${filename}`);
             if (!res.ok) throw new Error("Could not fetch JSON for table display");
             const jobs = await res.json();
+            window.allScrapedJobs = jobs;
 
             tableBody.innerHTML = "";
 
@@ -87,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const isApplied = appliedJobs.includes(job.jobId);
                 const checkboxHtml = isApplied
-                    ? `<span style="color:var(--accent-green); font-size: 1.2rem;" title="Already Applied">✅</span>`
+                    ? `<i data-lucide="check-circle-2" style="color:var(--accent-green); width: 20px; height: 20px;" title="Already Applied"></i>`
                     : `<input type="checkbox" class="job-checkbox" value="${job.jobId}">`;
 
                 const tr = document.createElement("tr");
@@ -106,12 +116,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 tableBody.appendChild(tr);
             });
 
+            const tablesLayout = document.getElementById("tables-layout");
+            if (tablesLayout) tablesLayout.classList.remove("hidden");
             tableContainer.classList.remove("hidden");
             if (btnStartApply) btnStartApply.classList.remove("hidden");
             currentContextFilename = filename;
 
             // Add a small delay to let the DOM paint, then smooth scroll down
             setTimeout(() => {
+                lucide.createIcons();
                 tableContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
 
@@ -130,8 +143,8 @@ document.addEventListener("DOMContentLoaded", () => {
         appendLog("Initializing scraper...", "info");
 
         startBtn.disabled = true;
-        btnText.textContent = "Scraping...";
-        loader.classList.remove("hidden");
+        btnText.innerHTML = `<div class="loader"></div> Scraping...`;
+        loader.classList.add("hidden");
 
         // 2. Prepare Form Data
         const formData = new FormData(form);
@@ -190,14 +203,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 // Restore UI
                 startBtn.disabled = false;
-                btnText.textContent = "Start Scraping";
+                btnText.innerHTML = `<i data-lucide="play" style="width: 20px; height: 20px;"></i> Start Scraping`;
+                lucide.createIcons();
                 loader.classList.add("hidden");
             });
 
         } catch (error) {
             appendLog(`Error: ${error.message}`, "error");
             startBtn.disabled = false;
-            btnText.textContent = "Start Scraping";
+            btnText.innerHTML = `<i data-lucide="play" style="width: 20px; height: 20px;"></i> Start Scraping`;
+            lucide.createIcons();
             loader.classList.add("hidden");
         }
     });
@@ -221,14 +236,80 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (selectAllJobs) {
         selectAllJobs.addEventListener("change", (e) => {
-            const checkboxes = document.querySelectorAll(".job-checkbox");
-            checkboxes.forEach(cb => cb.checked = e.target.checked);
+            document.querySelectorAll(".job-checkbox").forEach(cb => cb.checked = e.target.checked);
         });
     }
 
-    if (btnStartApply) {
-        btnStartApply.addEventListener("click", async () => {
-            const checkboxes = document.querySelectorAll(".job-checkbox:checked");
+    if (selectAllQJobs) {
+        selectAllQJobs.addEventListener("change", (e) => {
+            document.querySelectorAll(".q-job-checkbox").forEach(cb => cb.checked = e.target.checked);
+        });
+    }
+
+    if (selectAllCJobs) {
+        selectAllCJobs.addEventListener("change", (e) => {
+            document.querySelectorAll(".c-job-checkbox").forEach(cb => cb.checked = e.target.checked);
+        });
+    }
+    
+    function handleJobStatusUpdate(data) {
+        // Depending on status, log it and move the row.
+        appendLog(`[RESULT] ${data.companyName} - ${data.title}: ${data.status}`);
+        
+        // Find existing row in the main table
+        const cb = document.querySelector(`#table-body input[value="${data.jobId}"]`);
+        const mainRow = cb ? cb.closest('tr') : null;
+        
+        if (data.status === "Questionnaire Detected") {
+            if (mainRow) mainRow.remove();
+            
+            qContainer.classList.remove("hidden");
+            
+            // find snippet from global array
+            const job = window.allScrapedJobs?.find(j => j.jobId === data.jobId) || {};
+            const snippet = (job.shortDescription || job.jobDescription || "").replace(/<[^>]+>/g, '').substring(0, 100) + '...';
+            
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td style="text-align:center"><input type="checkbox" class="q-job-checkbox" value="${data.jobId}"></td>
+                <td><strong><a href="${data.jdURL || '#'}" target="_blank" style="color:var(--accent-blue); text-decoration:none;">${data.title}</a></strong></td>
+                <td>${data.companyName}</td>
+                <td style="max-width:300px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${snippet}">${snippet}</td>
+            `;
+            qTableBody.appendChild(tr);
+            lucide.createIcons();
+            
+        } else if (data.status.includes("Company Site")) {
+            if (mainRow) mainRow.remove();
+            
+            cContainer.classList.remove("hidden");
+            
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td style="text-align:center"><input type="checkbox" class="c-job-checkbox" value="${data.jdURL}"></td>
+                <td><strong>${data.title}</strong></td>
+                <td>${data.companyName}</td>
+                <td><a href="${data.jdURL}" target="_blank" class="btn-primary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-decoration: none; display: inline-block;"><i data-lucide="external-link" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: text-bottom;"></i> Open Link</a></td>
+            `;
+            cTableBody.appendChild(tr);
+            lucide.createIcons();
+            
+        } else if (data.status.includes("Success") || data.status === "Already Applied") {
+            if (mainRow) {
+                // Update checkbox to green tick
+                const td = mainRow.querySelector("td:first-child");
+                if (td) {
+                    td.innerHTML = `<i data-lucide="check-circle-2" style="color:var(--accent-green); width: 20px; height: 20px;" title="${data.status}"></i>`;
+                    lucide.createIcons();
+                }
+                mainRow.style.opacity = "0.6";
+            }
+        }
+    }
+    
+    function attachApplyLogic(button, checkboxClass, isQuestionnaire = false) {
+        button.addEventListener("click", async () => {
+            const checkboxes = document.querySelectorAll(`.${checkboxClass}:checked`);
             const jobIds = Array.from(checkboxes).map(cb => cb.value);
 
             if (jobIds.length === 0) {
@@ -237,8 +318,11 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             appendLog(`Starting application process for ${jobIds.length} jobs...`, "info");
-            btnStartApply.disabled = true;
-            btnStartApply.innerHTML = "🚀 Applying...";
+            button.disabled = true;
+            const originalText = button.innerHTML;
+            button.innerHTML = `<i data-lucide="loader-2" class="lucide-spin" style="width: 16px; height: 16px;"></i> Applying...`;
+            lucide.createIcons();
+            if (btnPauseApply) btnPauseApply.classList.remove("hidden");
 
             try {
                 const res = await fetch("/api/start_apply", {
@@ -246,7 +330,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         job_ids: jobIds,
-                        context_filename: currentContextFilename
+                        context_filename: currentContextFilename,
+                        is_questionnaire_run: isQuestionnaire
                     })
                 });
 
@@ -264,7 +349,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     const msg = event.data;
                     if (msg === "===PAUSED===") {
                         appendLog("Waiting for you to complete questionnaire... click Resume when done.", "warn");
-                        btnStartApply.innerHTML = "⏸️ Paused (Questionnaire)";
+                        button.innerHTML = `<i data-lucide="pause-circle" style="width: 16px; height: 16px;"></i> Paused (Questionnaire)`;
+                        lucide.createIcons();
+                        if (btnPauseApply) btnPauseApply.classList.add("hidden");
                         if (btnResumeApply) btnResumeApply.classList.remove("hidden");
                         
                         const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
@@ -277,60 +364,91 @@ document.addEventListener("DOMContentLoaded", () => {
                                 }
                             }
                         }, 500);
+                    } else if (msg === "===USER_PAUSED===") {
+                        appendLog("Bot paused. Click Resume when ready to continue applying.", "warn");
+                        button.innerHTML = `<i data-lucide="pause-circle" style="width: 16px; height: 16px;"></i> Paused (User)`;
+                        lucide.createIcons();
+                        if (btnPauseApply) btnPauseApply.classList.add("hidden");
+                        if (btnResumeApply) btnResumeApply.classList.remove("hidden");
+                    } else if (msg.startsWith("|||") && msg.endsWith("|||")) {
+                        try {
+                            const parsedData = JSON.parse(msg.substring(3, msg.length - 3));
+                            handleJobStatusUpdate(parsedData);
+                            
+                            // If it's the questionnaire table and it resulted in success, update row in qTable
+                            if (isQuestionnaire && (parsedData.status.includes("Success") || parsedData.status === "Already Applied")) {
+                                const qCb = document.querySelector(`#questionnaire-body input[value="${parsedData.jobId}"]`);
+                                const qRow = qCb ? qCb.closest('tr') : null;
+                                if (qRow) {
+                                    const td = qRow.querySelector("td:first-child");
+                                    if (td) {
+                                        td.innerHTML = `<i data-lucide="check-circle-2" style="color:var(--accent-green); width: 20px; height: 20px;" title="${parsedData.status}"></i>`;
+                                        lucide.createIcons();
+                                    }
+                                    qRow.style.opacity = "0.6";
+                                }
+                            }
+                        } catch(e) {
+                            console.error("Failed parsing UI message:", e);
+                        }
                     } else {
                         appendLog(msg);
-                        
-                        // Check if this log line is a result for a company site job
-                        // Example log: [RESULT] Google - Frontend Engineer: Skipped (Company Site)
-                        if (msg.startsWith("[RESULT]") && msg.includes("Company Site")) {
-                            try {
-                                const pureMsg = msg.replace("[RESULT]", "").trim();
-                                const dashInx = pureMsg.indexOf('-');
-                                const colonInx = pureMsg.lastIndexOf(':');
-                                
-                                if (dashInx !== -1 && colonInx !== -1 && dashInx < colonInx) {
-                                    const company = pureMsg.substring(0, dashInx).trim();
-                                    const title = pureMsg.substring(dashInx + 1, colonInx).trim();
-                                    
-                                    // Make the table container visible if it isn't already
-                                    document.getElementById("company-site-jobs-container").classList.remove("hidden");
-                                    
-                                    const tbody = document.getElementById("company-site-body");
-                                    const tr = document.createElement("tr");
-                                    
-                                    // Try to reconstruct a Google search link for the job
-                                    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(company + ' ' + title + ' careers')}`;
-                                    
-                                    tr.innerHTML = `
-                                        <td><strong>${title}</strong></td>
-                                        <td>${company}</td>
-                                        <td><a href="${searchUrl}" target="_blank" class="btn-primary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; text-decoration: none; display: inline-block;">Google Search 🔍</a></td>
-                                    `;
-                                    tbody.appendChild(tr);
-                                }
-                            } catch (e) {
-                                console.warn("Could not parse company site job for table:", e);
-                            }
-                        }
                     }
                 };
+                
                 eventSource.addEventListener("end", async (event) => {
                     eventSource.close();
                     appendLog("Application run finished.", "success");
-                    btnStartApply.disabled = false;
-                    btnStartApply.innerHTML = "🚀 Start Applying";
+                    button.disabled = false;
+                    button.innerHTML = originalText;
                     if (btnResumeApply) btnResumeApply.classList.add("hidden");
+                    if (btnPauseApply) btnPauseApply.classList.add("hidden");
 
-                    // Refresh table to show newly applied badges
                     if (currentContextFilename) {
                         appendLog("Refreshing table to show new applied statuses...", "info");
-                        await renderResultsTable(currentContextFilename);
+                        // We do not re-render the whole table here so row shifts aren't lost immediately,
+                        // unless we specifically want a fresh start. We're keeping DOM updates manual.
                     }
                 });
             } catch (error) {
                 appendLog(`Error starting apply: ${error.message}`, "error");
-                btnStartApply.disabled = false;
-                btnStartApply.innerHTML = "🚀 Start Applying";
+                button.disabled = false;
+                button.innerHTML = originalText;
+                if (btnPauseApply) btnPauseApply.classList.add("hidden");
+            }
+        });
+    }
+
+    if (btnStartApply) {
+        attachApplyLogic(btnStartApply, "job-checkbox", false);
+    }
+    
+    if (btnApplyQuestionnaire) {
+        attachApplyLogic(btnApplyQuestionnaire, "q-job-checkbox", true);
+    }
+
+    if (btnApplyCompany) {
+        btnApplyCompany.addEventListener("click", () => {
+            const checkboxes = document.querySelectorAll(".c-job-checkbox:checked");
+            const urls = Array.from(checkboxes).map(cb => cb.value);
+            if (urls.length === 0) {
+                alert("Please select at least one company site job.");
+                return;
+            }
+            urls.forEach(url => window.open(url, "_blank"));
+            appendLog(`Opened ${urls.length} company links in new tabs.`, "info");
+        });
+    }
+
+    if (btnPauseApply) {
+        btnPauseApply.addEventListener("click", async () => {
+            if (!currentApplyTaskId) return;
+            appendLog("Requesting pause after current job...", "info");
+            try {
+                const res = await fetch(`/api/pause_apply/${currentApplyTaskId}`, { method: "POST" });
+                if (!res.ok) throw new Error("Failed to request pause");
+            } catch (err) {
+                appendLog("Error pausing: " + err.message, "error");
             }
         });
     }
@@ -341,7 +459,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
             appendLog("Sending resume signal...", "info");
             btnResumeApply.classList.add("hidden");
-            btnStartApply.innerHTML = "🚀 Applying...";
+            if (btnPauseApply) btnPauseApply.classList.remove("hidden");
+            btnStartApply.innerHTML = `<i data-lucide="loader-2" class="lucide-spin" style="width: 16px; height: 16px;"></i> Applying...`;
+            if (btnApplyQuestionnaire) btnApplyQuestionnaire.innerHTML = `<i data-lucide="loader-2" class="lucide-spin" style="width: 16px; height: 16px;"></i> Apply to Selected`;
+            lucide.createIcons();
 
             try {
                 const res = await fetch(`/api/resume_apply/${currentApplyTaskId}`, { method: "POST" });
@@ -349,7 +470,7 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch (err) {
                 appendLog("Error resuming: " + err.message, "error");
                 btnResumeApply.classList.remove("hidden");
-                btnStartApply.innerHTML = "⏸️ Paused (Questionnaire)";
+                if (btnPauseApply) btnPauseApply.classList.add("hidden");
             }
         });
     }

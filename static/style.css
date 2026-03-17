@@ -1,21 +1,30 @@
 /* BASE VARIABLES & RESET */
 :root {
-    --bg-main: #0f111a;
-    --bg-card: #1e2130;
-    --bg-terminal: #090a0f;
-    --border: #2a2d3e;
+    --bg-main: #0B0E14;
+    /* OLED Dark */
+    --bg-card: #141824;
+    /* Elevated Card */
+    --bg-terminal: #050608;
+    --border: #232A3D;
 
-    --text-main: #f8f8f2;
-    --text-muted: #8b92a5;
+    --text-main: #F8FAFC;
+    --text-muted: #94A3B8;
 
-    --primary: #6272a4;
-    --primary-hover: #7b8dc7;
-    --accent-blue: #8be9fd;
-    --accent-green: #50fa7b;
-    --accent-pink: #ff79c6;
+    --primary: #1E40AF;
+    --primary-hover: #3B82F6;
+    --color-cta: #F59E0B;
+    /* Amber CTA */
+
+    --accent-blue: #3B82F6;
+    --accent-green: #10B981;
+    --accent-pink: #EC4899;
 
     --radius: 12px;
-    --transition: all 0.2s ease;
+    --transition: all 200ms ease;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.6);
 }
 
 * {
@@ -25,11 +34,22 @@
 }
 
 body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Fira Sans', sans-serif;
     background-color: var(--bg-main);
     color: var(--text-main);
     line-height: 1.5;
     min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.terminal,
+.log-line {
+    font-family: 'Fira Code', monospace;
 }
 
 /* LAYOUT */
@@ -83,7 +103,13 @@ body {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 1.5rem;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--shadow-md);
+    transition: var(--transition);
+}
+
+.card:hover {
+    box-shadow: var(--shadow-lg);
+    border-color: rgba(59, 130, 246, 0.3);
 }
 
 .card h2 {
@@ -93,6 +119,9 @@ body {
     color: var(--text-main);
     border-bottom: 1px solid var(--border);
     padding-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 /* FORMS */
@@ -191,15 +220,16 @@ summary:hover {
     line-height: 1.4;
 }
 
-/* SUBMIT BUTTON */
+/* BUTTONS */
 .btn-primary {
     width: 100%;
-    padding: 1rem;
+    padding: 0.75rem 1.5rem;
     border: none;
     border-radius: 8px;
-    background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+    background: var(--primary);
     color: white;
-    font-size: 1.1rem;
+    font-size: 1rem;
+    font-family: 'Fira Sans', sans-serif;
     font-weight: 600;
     cursor: pointer;
     transition: var(--transition);
@@ -207,11 +237,13 @@ summary:hover {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+    box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(98, 114, 164, 0.4);
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
 }
 
 .btn-primary:active {
@@ -222,6 +254,28 @@ summary:hover {
     opacity: 0.7;
     cursor: not-allowed;
     transform: none;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: 'Fira Sans', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.btn-secondary:hover {
+    background: rgba(30, 64, 175, 0.1);
+    transform: translateY(-1px);
 }
 
 /* LOADER */
@@ -247,10 +301,7 @@ summary:hover {
 /* TERMINAL WINDOW */
 
 
-.results-panel {
-    position: sticky;
-    top: 10px;
-}
+.results-panel {}
 
 .terminal {
     padding: 0;
@@ -380,6 +431,9 @@ summary:hover {
     border-radius: 8px;
     font-weight: 600;
     transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .btn-download.json {
@@ -400,12 +454,29 @@ summary:hover {
 }
 
 /* RESULTS TABLE */
-.table-container {
-    position: sticky;
-    padding: 1.5rem;
+.tables-layout {
     grid-column: 1 / -1;
-    /* Make table take full width of grid */
-    margin-top: 1rem;
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+    align-items: stretch;
+}
+
+.right-tables-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.table-container {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.table-container>div[style*="overflow-x: auto"] {
+    flex: 1;
 }
 
 #results-table {
@@ -426,6 +497,10 @@ summary:hover {
     color: var(--accent-blue);
     font-weight: 600;
     white-space: nowrap;
+
+    top: 0;
+    backdrop-filter: blur(8px);
+    z-index: 10;
 }
 
 #results-table tr:hover {

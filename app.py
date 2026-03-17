@@ -7,6 +7,8 @@ import sys
 import contextlib
 import io
 import subprocess
+import time
+import random
 from flask import Flask, render_template, request, jsonify, Response, send_file
 from werkzeug.utils import secure_filename
 from datetime import datetime
@@ -144,9 +146,11 @@ def run_scrape_task(task_id, params, cv_text=None):
         q.put("===END_OF_STREAM===")
 
 
-def run_apply_task(task_id, job_ids, context_filename=None):
+def run_apply_task(task_id, job_ids, context_filename=None, params=None):
     """Runs the apply job in a background thread and redirects logs to the queue"""
     q = tasks[task_id]['queue']
+    if params is None:
+        params = {}
     
     # Store the original streams
     orig_stdout = sys.stdout
@@ -186,34 +190,36 @@ def run_apply_task(task_id, job_ids, context_filename=None):
             
         print("[SUCCESS] Successfully connected to Microsoft Edge!")
         
-        deferred_jobs = []
-        
         for idx, job in enumerate(jobs_to_apply):
-            job_status = apply_to_job(driver, job)
-            print(f"[RESULT] {job.get('companyName')} - {job.get('title')}: {job_status}")
-            
-            if job_status == "Questionnaire Detected":
-                print(f"[WARN] Deferring questionnaire job: {job.get('companyName')} - {job.get('title')}")
-                deferred_jobs.append(job)
-                continue
+            # Check for generic user pause before interacting with the next job
+            if tasks[task_id].get('user_paused'):
+                print("===USER_PAUSED===")
+                tasks[task_id]['pause_toggle'].wait() # Block until resume clears this
+                tasks[task_id]['pause_toggle'].clear() # Reset for next pause
+                print("[INFO] Resuming application run...")
                 
+            job_status = apply_to_job(driver, job)
+            
+            # Emit structured JSON payload for frontend table shifting
+            ui_msg = json.dumps({
+                "type": "job_status",
+                "jobId": job.get("jobId"),
+                "status": job_status,
+                "jdURL": job.get("jdURL"),
+                "companyName": job.get("companyName"),
+                "title": job.get("title")
+            })
+            print(f"|||{ui_msg}|||")
+            
             if "Success" in job_status or job_status == "Already Applied":
                 save_applied_job(job.get('jobId'))
                 
-            if idx < len(jobs_to_apply) - 1:
-                import time, random
-                wait_time = random.uniform(5, 8)
-                print(f"[INFO] Waiting {wait_time:.1f} seconds before next job...")
-                time.sleep(wait_time)
-                
-        if deferred_jobs:
-            print(f"\n[INFO] Finished main list. Now processing {len(deferred_jobs)} deferred questionnaire jobs...")
-            for idx, job in enumerate(deferred_jobs):
-                print(f"\n[INFO] Re-applying to deferred job: {job.get('companyName')} - {job.get('title')}")
-                job_status = apply_to_job(driver, job)
-                print(f"[RESULT] {job.get('companyName')} - {job.get('title')}: {job_status}")
-                
-                if job_status == "Questionnaire Detected":
+            # If the job had a questionnaire and we were explicitly told it was a questionnaire run
+            # we pause here for the user to complete it
+            if job_status == "Questionnaire Detected":
+                # Only pause the backend if they clicked the apply button from the Questionnaire table
+                # Otherwise, it just skips and the frontend moves the row.
+                if params.get('is_questionnaire_run'):
                     print("[WARN] Stopping automation because manual intervention is required for a questionnaire.")
                     print("===PAUSED===")
                     tasks[task_id]['pause_event'].clear() # Ensure it's cleared before waiting
@@ -221,15 +227,12 @@ def run_apply_task(task_id, job_ids, context_filename=None):
                     print(f"[INFO] Resuming automation after manual intervention...")
                     # By resuming, we assume the user successfully applied manually
                     job_status = "Success (Manual)"
-                    
-                if "Success" in job_status or job_status == "Already Applied":
                     save_applied_job(job.get('jobId'))
-                    
-                if idx < len(deferred_jobs) - 1:
-                    import time, random
-                    wait_time = random.uniform(5, 8)
-                    print(f"[INFO] Waiting {wait_time:.1f} seconds before next job...")
-                    time.sleep(wait_time)
+                
+            if idx < len(jobs_to_apply) - 1:
+                wait_time = random.uniform(2, 4)
+                print(f"[INFO] Waiting {wait_time:.1f} seconds before next job...")
+                time.sleep(wait_time)
                     
         print("\n[SUMMARY] Finished application attempt run.")
         tasks[task_id]['status'] = 'completed'
@@ -378,6 +381,7 @@ def start_apply():
     data = request.json
     job_ids = data.get('job_ids', [])
     context_filename = data.get('context_filename', '')
+    is_questionnaire_run = data.get('is_questionnaire_run', False)
     
     if not job_ids:
         return jsonify({"error": "No job IDs provided"}), 400
@@ -388,11 +392,15 @@ def start_apply():
         'status': 'running',
         'queue': queue.Queue(),
         'files': {},
-        'pause_event': threading.Event()
+        'pause_event': threading.Event(),
+        'pause_toggle': threading.Event(),
+        'user_paused': False
     }
     
+    params = {'is_questionnaire_run': is_questionnaire_run}
+    
     # Run in background thread
-    thread = threading.Thread(target=run_apply_task, args=(task_id, job_ids, context_filename))
+    thread = threading.Thread(target=run_apply_task, args=(task_id, job_ids, context_filename, params))
     thread.daemon = True
     thread.start()
     
@@ -404,9 +412,23 @@ def resume_apply(task_id):
     if task_id not in tasks:
         return jsonify({"error": "Task not found"}), 404
         
-    # Unblock the background thread
+    # Clear user pause if it was set
+    if tasks[task_id].get('user_paused'):
+        tasks[task_id]['user_paused'] = False
+        tasks[task_id]['pause_toggle'].set()
+        
+    # Unblock the questionnaire intervention thread if it was blocked
     tasks[task_id]['pause_event'].set()
     return jsonify({"status": "resumed"})
+
+@app.route('/api/pause_apply/<task_id>', methods=['POST'])
+def pause_apply(task_id):
+    if task_id not in tasks:
+        return jsonify({"error": "Task not found"}), 404
+        
+    # Request the thread to pause before the next job
+    tasks[task_id]['user_paused'] = True
+    return jsonify({"status": "pausing"})
 
 
 if __name__ == '__main__':
