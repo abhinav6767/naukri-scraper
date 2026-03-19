@@ -54,7 +54,7 @@
                     <div class="form-row">
                         <div class="form-group half">
                             <label for="max_jobs">Max Jobs</label>
-                            <input type="number" id="max_jobs" name="max_jobs" value="100" min="1">
+                            <input type="number" id="max_jobs" name="max_jobs" value="100" min="1" max="499" oninput="if(this.value>499)this.value=499; if(this.value<1)this.value=1;">
                         </div>
                         <div class="form-group half">
                             <label for="freshness">Freshness (Days)</label>
@@ -354,9 +354,10 @@
                                 style="border-color: var(--color-cta); color: var(--color-cta); padding: 0.5rem 1rem; width: auto;">
                                 <i data-lucide="play" style="width: 16px; height: 16px;"></i> Resume
                             </button>
+                            <span id="apply-cost" style="font-size: 0.9rem; margin-right: 15px; color: var(--color-cta); font-weight: bold;">Cost: 0 Credits</span>
                             <button id="btn-start-apply" type="button" class="btn-primary hidden"
                                 style="padding: 0.5rem 1rem; width: auto;">
-                                <i data-lucide="rocket" style="width: 16px; height: 16px;"></i> Apply
+                                <i data-lucide="rocket" style="width: 16px; height: 16px;"></i> Apply (<span id="apply-btn-qty">0</span>)
                             </button>
                         </div>
                     </div>
@@ -459,6 +460,8 @@
     </div>
 
     <script>
+        window.USER_ID = "{{ userId }}";
+        window.USER_CREDITS = parseInt("{{ credits }}") || 0;
         // Initialize Lucide icons
         lucide.createIcons();
     </script>

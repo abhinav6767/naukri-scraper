@@ -89,7 +89,8 @@ def run_scrape_task(task_id, params, cv_text=None):
             print("[INFO] User provided a CV. AI Relevance Scoring enabled.")
             
         keyword = params.get('keyword', '')
-        max_jobs = int(params.get('max_jobs', 100))
+        # Hard limit scrap count to 499 to prevent excessive memory/requests
+        max_jobs = min(499, int(params.get('max_jobs', 100)))
         fetch_details = str(params.get('fetch_details', 'false')).lower() == 'true'
         output_name = params.get('output_name', f'naukri_jobs_{task_id[:6]}')
         
@@ -146,6 +147,20 @@ def run_scrape_task(task_id, params, cv_text=None):
         q.put("===END_OF_STREAM===")
 
 
+def deduct_one_credit(user_id):
+    import urllib.request
+    import json
+    req_data = json.dumps({"userId": user_id, "creditsToDeduct": 1}).encode('utf-8')
+    try:
+        req = urllib.request.Request("http://localhost:3000/api/naukri-credits", data=req_data, headers={'Content-Type': 'application/json'})
+        with urllib.request.urlopen(req) as response:
+            resp_data = json.loads(response.read().decode())
+            return resp_data.get('success', False)
+    except Exception as e:
+        print(f"[WARN] Failed to deduct credit for user {user_id}: {e}")
+        return False
+
+
 def run_apply_task(task_id, job_ids, context_filename=None, params=None):
     """Runs the apply job in a background thread and redirects logs to the queue"""
     q = tasks[task_id]['queue']
@@ -159,6 +174,9 @@ def run_apply_task(task_id, job_ids, context_filename=None, params=None):
     # Redirect streams to our queue in this thread
     sys.stdout = QueueWriter(q, orig_stdout)
     sys.stderr = QueueWriter(q, orig_stderr)
+    
+    user_id = params.get('user_id')
+    is_q_run = params.get('is_questionnaire_run', False)
     
     try:
         print(f"[INFO] Starting Apply Task {task_id}")
@@ -177,11 +195,6 @@ def run_apply_task(task_id, job_ids, context_filename=None, params=None):
             print("[WARN] No context filename provided. Falling back to default output.json/naukri_jobs.json if exists")
             # fallback loading
         
-        # Filter jobs based on what's already applied
-        applied_jobs = load_applied_jobs()
-        jobs_to_apply = [j for j in jobs if j.get('jobId') in job_ids and j.get('jobId') not in applied_jobs]
-        print(f"[INFO] Found {len(jobs_to_apply)} jobs to process (skipped {len(job_ids) - len(jobs_to_apply)} already applied).")
-        
         driver = get_edge_driver()
         if not driver:
             print("[ERROR] Could not connect to Microsoft Edge (make sure it's running with debugging port 9222!)")
@@ -190,16 +203,57 @@ def run_apply_task(task_id, job_ids, context_filename=None, params=None):
             
         print("[SUCCESS] Successfully connected to Microsoft Edge!")
         
-        for idx, job in enumerate(jobs_to_apply):
-            # Check for generic user pause before interacting with the next job
-            if tasks[task_id].get('user_paused'):
-                print("===USER_PAUSED===")
-                tasks[task_id]['pause_toggle'].wait() # Block until resume clears this
-                tasks[task_id]['pause_toggle'].clear() # Reset for next pause
-                print("[INFO] Resuming application run...")
-                
-            job_status = apply_to_job(driver, job)
+        # We find ALL jobs the user selected, then we handle applied ones individually so the UI knows.
+        selected_jobs = [j for j in jobs if j.get('jobId') in job_ids]
+        applied_jobs = load_applied_jobs()
+        
+        for idx, job in enumerate(selected_jobs):
+            # Check if applied already
+            if job.get('jobId') in applied_jobs:
+                job_status = "Already Applied"
+                print(f"[INFO] Skipping {job.get('companyName')} - Already applied locally.")
+            else:
+                # Check for generic user pause before interacting with the next job
+                if tasks[task_id].get('user_paused'):
+                    print("===USER_PAUSED===")
+                    tasks[task_id]['pause_toggle'].wait() # Block until resume clears this
+                    tasks[task_id]['pause_toggle'].clear() # Reset for next pause
+                    print("[INFO] Resuming application run...")
+
+                # Clean up extra tabs before applying to next job (helps prevent getting stuck)
+                try:
+                    if len(driver.window_handles) > 1:
+                        print("[INFO] Cleaning up extra tabs...")
+                        for handle in driver.window_handles[1:]:
+                            driver.switch_to.window(handle)
+                            driver.close()
+                    driver.switch_to.window(driver.window_handles[0])
+                except Exception as e:
+                    print(f"[WARN] Tab cleanup issue: {e}")
+                    
+                job_status = apply_to_job(driver, job)
             
+            # ==== DEDUCT CREDIT CONDITIONALLY ====
+            # If the application succeeded, or it hit a questionnaire for the FIRST time
+            # We skip deduction if it was a company site, already applied, navigation failed, etc.
+            # We also skip deduction if this is a follow-up Questionnaire Run (they paid previously).
+            chargeable_statuses = ["Success", "Questionnaire Detected", "Success (Manual)"]
+            
+            should_deduct = False
+            if user_id and not is_q_run:
+                # If any chargeable status matches, we flag to deduct.
+                if any(cs in job_status for cs in chargeable_statuses):
+                    should_deduct = True
+            
+            if should_deduct:
+                success_deduct = deduct_one_credit(user_id)
+                if not success_deduct:
+                    print("[WARN] Could not deduct credit for this job! You might be out of credits.")
+                    # We might halt or just warn. Let's halt if they have 0 credits.
+                    # Since we applied already, the current status is what it is, but we break next loop
+                    pass
+            # =====================================
+
             # Emit structured JSON payload for frontend table shifting
             ui_msg = json.dumps({
                 "type": "job_status",
@@ -217,19 +271,44 @@ def run_apply_task(task_id, job_ids, context_filename=None, params=None):
             # If the job had a questionnaire and we were explicitly told it was a questionnaire run
             # we pause here for the user to complete it
             if job_status == "Questionnaire Detected":
-                # Only pause the backend if they clicked the apply button from the Questionnaire table
-                # Otherwise, it just skips and the frontend moves the row.
-                if params.get('is_questionnaire_run'):
+                if is_q_run:
                     print("[WARN] Stopping automation because manual intervention is required for a questionnaire.")
                     print("===PAUSED===")
                     tasks[task_id]['pause_event'].clear() # Ensure it's cleared before waiting
-                    tasks[task_id]['pause_event'].wait()  # Block until /api/resume_apply is called
+                    
+                    print("[INFO] Waiting for you to complete it manually. You can click 'Resume' or I will auto-detect when finished...")
+                    # Loop and poll every 2 seconds instead of indefinite block
+                    while not tasks[task_id]['pause_event'].is_set():
+                        try:
+                            # Auto-detect check based on Naukri confirmation page
+                            if "Apply Confirmation" in driver.title or "Applied to" in driver.page_source:
+                                print("[INFO] Auto-detected successful manual application!")
+                                tasks[task_id]['pause_event'].set()
+                                break
+                        except Exception:
+                            # Browser closed intentionally or navigating heavily
+                            pass
+                        
+                        # Wait 2 seconds then check again, unless event is set by Resume button
+                        tasks[task_id]['pause_event'].wait(2.0)
+                        
                     print(f"[INFO] Resuming automation after manual intervention...")
                     # By resuming, we assume the user successfully applied manually
                     job_status = "Success (Manual)"
                     save_applied_job(job.get('jobId'))
+                    
+                    # Refire success to UI so it gets recorded in this session!
+                    ui_msg2 = json.dumps({
+                        "type": "job_status",
+                        "jobId": job.get("jobId"),
+                        "status": job_status,
+                        "jdURL": job.get("jdURL"),
+                        "companyName": job.get("companyName"),
+                        "title": job.get("title")
+                    })
+                    print(f"|||{ui_msg2}|||")
                 
-            if idx < len(jobs_to_apply) - 1:
+            if idx < len(selected_jobs) - 1:
                 wait_time = random.uniform(2, 4)
                 print(f"[INFO] Waiting {wait_time:.1f} seconds before next job...")
                 time.sleep(wait_time)
@@ -244,6 +323,15 @@ def run_apply_task(task_id, job_ids, context_filename=None, params=None):
         tasks[task_id]['status'] = 'error'
         
     finally:
+        if 'driver' in locals() and driver:
+            try:
+                for handle in driver.window_handles:
+                    driver.switch_to.window(handle)
+                    driver.close()
+                driver.quit()
+                print("[INFO] Closed Microsoft Edge.")
+            except:
+                pass
         # Restore standard output streams
         sys.stdout = orig_stdout
         sys.stderr = orig_stderr
@@ -252,7 +340,9 @@ def run_apply_task(task_id, job_ids, context_filename=None, params=None):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    userId = request.args.get('userId', '')
+    credits = request.args.get('credits', '0')
+    return render_template('index.html', userId=userId, credits=credits)
 
 
 @app.route('/api/scrape', methods=['POST'])
@@ -397,11 +487,15 @@ def start_apply():
     job_ids = data.get('job_ids', [])
     context_filename = data.get('context_filename', '')
     is_questionnaire_run = data.get('is_questionnaire_run', False)
+    user_id = data.get('userId', '')
     
     if not job_ids:
         return jsonify({"error": "No job IDs provided"}), 400
-        
+
     task_id = str(uuid.uuid4())
+    
+    if not user_id:
+        return jsonify({"error": "Unauthorized. Missing user ID for credit deduction."}), 401
     
     tasks[task_id] = {
         'status': 'running',
@@ -412,7 +506,10 @@ def start_apply():
         'user_paused': False
     }
     
-    params = {'is_questionnaire_run': is_questionnaire_run}
+    params = {
+        'is_questionnaire_run': is_questionnaire_run,
+        'user_id': user_id
+    }
     
     # Run in background thread
     thread = threading.Thread(target=run_apply_task, args=(task_id, job_ids, context_filename, params))

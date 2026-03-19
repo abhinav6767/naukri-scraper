@@ -49,11 +49,11 @@ def apply_to_job(driver, job):
     try:
         # Looking for the apply button
         apply_btn = WebDriverWait(driver, 6).until(
-            EC.presence_of_element_located((By.XPATH, "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'apply')]"))
+            EC.presence_of_element_located((By.XPATH, "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'apply') or contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'applied')]"))
         )
         
         btn_text = apply_btn.text.strip().lower()
-        if 'already applied' in btn_text:
+        if 'applied' in btn_text:
             print("Already applied in the past. Skipping.")
             return "Already Applied"
         
@@ -67,11 +67,16 @@ def apply_to_job(driver, job):
         
         try:
             apply_btn.click()
-        except ElementClickInterceptedException:
+        except Exception:
             driver.execute_script("arguments[0].click();", apply_btn)
             
         print("[SUCCESS] Clicked Apply!")
         human_delay(3, 5) # wait for modal/questionnaire or success state
+        
+        # Switch to new tab if Naukri opened the application flow in a popup
+        if len(driver.window_handles) > 1:
+            driver.switch_to.window(driver.window_handles[-1])
+            human_delay(1, 2)
         
         # Check for Questionnaire
         try:
@@ -84,8 +89,11 @@ def apply_to_job(driver, job):
             
         # If no questionnaire, check if application was successful
         try:
-            success_msg = driver.find_elements(By.XPATH, "//*[contains(text(), 'successfully applied') or contains(text(), 'applied successfully')]")
-            if len(success_msg) > 0:
+            page_src = driver.page_source.lower()
+            page_title = driver.title.lower()
+            curr_url = driver.current_url.lower()
+            
+            if "apply confirmation" in page_title or "applied to" in page_src or "successfully applied" in page_src or "applied successfully" in page_src or "naukri.com/myapply" in curr_url:
                 print("[SUCCESS] Application Successful!")
                 return "Success"
         except:
@@ -96,7 +104,7 @@ def apply_to_job(driver, job):
     except TimeoutException:
         # Perhaps already applied?
         try:
-            already_applied = driver.find_elements(By.XPATH, "//*[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'already applied')]")
+            already_applied = driver.find_elements(By.XPATH, "//*[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'already applied') or text()='Applied' or text()='applied']")
             if len(already_applied) > 0:
                 print("Information: Already applied to this job.")
                 return "Already Applied"
@@ -106,6 +114,7 @@ def apply_to_job(driver, job):
         return "Failed (Apply Button Not Found)"
     except Exception as e:
         print("Error applying:")
+        import traceback
         traceback.print_exc()
         return "Failed (Error)"
 

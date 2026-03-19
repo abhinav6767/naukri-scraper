@@ -279,9 +279,60 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    function updateCostAndCheckLimits() {
+        const regularChecked = document.querySelectorAll(".job-checkbox:checked").length;
+        // const qChecked = document.querySelectorAll(".q-job-checkbox:checked").length; // If you want to limit Q jobs. Usually they use same apply button logic.
+        const totalChecked = regularChecked; // Just limiting the main ones for now, easy to extend
+        
+        const costLabel = document.getElementById("apply-cost");
+        const qtyLabel = document.getElementById("apply-btn-qty");
+        const userCreds = window.USER_CREDITS || 0;
+        
+        if (costLabel) costLabel.innerHTML = `Cost: ${totalChecked} / ${userCreds} Credits`;
+        if (qtyLabel) qtyLabel.innerText = totalChecked;
+    }
+
+    // Delegate checkbox changes for limits
+    document.addEventListener("change", (e) => {
+        if (e.target.classList.contains("job-checkbox") || e.target.id === "select-all-jobs") {
+            // Count after change
+            const totalChecked = document.querySelectorAll(".job-checkbox:checked").length;
+            const userCreds = window.USER_CREDITS || 0;
+            
+            if (totalChecked > userCreds) {
+                alert(`You only have ${userCreds} credits available. You cannot select more jobs.`);
+                e.target.checked = false;
+                
+                // If it was select-all, uncheck the ones that put us over limit
+                if (e.target.id === "select-all-jobs") {
+                    let count = 0;
+                    document.querySelectorAll(".job-checkbox").forEach(cb => {
+                        if (count >= userCreds) cb.checked = false;
+                        else if (cb.checked) count++;
+                    });
+                }
+            }
+            updateCostAndCheckLimits();
+        }
+    });
+
     if (selectAllJobs) {
         selectAllJobs.addEventListener("change", (e) => {
-            document.querySelectorAll(".job-checkbox").forEach(cb => cb.checked = e.target.checked);
+            const userCreds = window.USER_CREDITS || 0;
+            let count = 0;
+            document.querySelectorAll(".job-checkbox").forEach(cb => {
+                if (e.target.checked) {
+                    if (count < userCreds) {
+                        cb.checked = true;
+                        count++;
+                    } else {
+                        cb.checked = false;
+                    }
+                } else {
+                    cb.checked = false;
+                }
+            });
+            updateCostAndCheckLimits();
         });
     }
 
@@ -297,6 +348,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     
+    window.sessionAppliedJobs = window.sessionAppliedJobs || [];
+
     function handleJobStatusUpdate(data) {
         // Depending on status, log it and move the row.
         appendLog(`[RESULT] ${data.companyName} - ${data.title}: ${data.status}`);
@@ -351,6 +404,47 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 mainRow.style.opacity = "0.6";
             }
+            
+            // Push to session jobs for API recording
+            if (data.status.includes("Success")) {
+                
+                // --- -1 Credit Floating Animation ---
+                const anim = document.createElement("div");
+                anim.innerHTML = "-1 Credit";
+                anim.style.position = "fixed";
+                anim.style.top = "50%";
+                anim.style.left = "50%";
+                anim.style.transform = "translate(-50%, -50%)";
+                anim.style.color = "#ef4444"; // Red
+                anim.style.fontWeight = "bold";
+                anim.style.fontSize = "3.5rem";
+                anim.style.zIndex = "99999";
+                anim.style.pointerEvents = "none";
+                anim.style.textShadow = "0 0 20px rgba(239, 68, 68, 0.6)";
+                anim.style.animation = "float-up-fade 2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards";
+                document.body.appendChild(anim);
+                
+                if (!document.getElementById("credit-anim-style")) {
+                    const style = document.createElement("style");
+                    style.id = "credit-anim-style";
+                    style.textContent = `
+                        @keyframes float-up-fade {
+                            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+                            15% { opacity: 1; transform: translate(-50%, -60%) scale(1.1); }
+                            30% { opacity: 1; transform: translate(-50%, -60%) scale(1); }
+                            100% { opacity: 0; transform: translate(-50%, -150%) scale(0.9); }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+                setTimeout(() => anim.remove(), 2000);
+                // ------------------------------------
+                
+                const jobFromMem = window.allScrapedJobs?.find(j => j.jobId === data.jobId);
+                if (jobFromMem && !window.sessionAppliedJobs.find(x => x.jobId === data.jobId)) {
+                    window.sessionAppliedJobs.push(jobFromMem);
+                }
+            }
         }
     }
     
@@ -372,13 +466,21 @@ document.addEventListener("DOMContentLoaded", () => {
             if (btnPauseApply) btnPauseApply.classList.remove("hidden");
 
             try {
+                // First open Edge automatically
+                appendLog("Connecting to Microsoft Edge...", "info");
+                try {
+                    await fetch("/api/open_edge", { method: "POST" });
+                } catch (edgeErr) {
+                    appendLog("Failed to auto-open edge: " + edgeErr.message, "warn");
+                }
                 const res = await fetch("/api/start_apply", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         job_ids: jobIds,
                         context_filename: currentContextFilename,
-                        is_questionnaire_run: isQuestionnaire
+                        is_questionnaire_run: isQuestionnaire,
+                        userId: window.USER_ID || ""
                     })
                 });
 
@@ -404,13 +506,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
                         audio.play().catch(e => console.log("Audio play failed:", e));
                         
-                        setTimeout(() => {
-                            if (confirm("Questionnaire paused. Press OK AFTER you have completed the questionnaire in Edge to resume applying.")) {
-                                if (btnResumeApply && !btnResumeApply.classList.contains("hidden")) {
-                                    btnResumeApply.click();
-                                }
-                            }
-                        }, 500);
                     } else if (msg === "===USER_PAUSED===") {
                         appendLog("Bot paused. Click Resume when ready to continue applying.", "warn");
                         button.innerHTML = `<i data-lucide="pause-circle" style="width: 16px; height: 16px;"></i> Paused (User)`;
@@ -418,12 +513,16 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (btnPauseApply) btnPauseApply.classList.add("hidden");
                         if (btnResumeApply) btnResumeApply.classList.remove("hidden");
                     } else if (msg.startsWith("|||") && msg.endsWith("|||")) {
-                        try {
-                            const parsedData = JSON.parse(msg.substring(3, msg.length - 3));
-                            handleJobStatusUpdate(parsedData);
-                            
-                            // If it's the questionnaire table and it resulted in success, update row in qTable
-                            if (isQuestionnaire && (parsedData.status.includes("Success") || parsedData.status === "Already Applied")) {
+                try {
+                    const parsedData = JSON.parse(msg.substring(3, msg.length - 3));
+                    // Fix relative URLs if Naukri returned them without the domain
+                    if (parsedData.jdURL && !parsedData.jdURL.startsWith("http")) {
+                        parsedData.jdURL = "https://www.naukri.com" + parsedData.jdURL;
+                    }
+                    handleJobStatusUpdate(parsedData);
+                    
+                    // If it's the questionnaire table and it resulted in success, update row in qTable
+                    if (isQuestionnaire && (parsedData.status.includes("Success") || parsedData.status === "Already Applied")) {
                                 const qCb = document.querySelector(`#questionnaire-body input[value="${parsedData.jobId}"]`);
                                 const qRow = qCb ? qCb.closest('tr') : null;
                                 if (qRow) {
@@ -433,7 +532,24 @@ document.addEventListener("DOMContentLoaded", () => {
                                         lucide.createIcons();
                                     }
                                     qRow.style.opacity = "0.6";
+                                    qRow.style.animation = "none";
                                 }
+                            } else if (!isQuestionnaire && parsedData.status === "Questionnaire Detected") {
+                                // Add highlight animation to the newly injected questionnaire row natively!
+                                setTimeout(() => {
+                                    const rawCb = document.querySelector(`#questionnaire-body input[value="${parsedData.jobId}"]`);
+                                    if (rawCb && rawCb.closest('tr')) {
+                                        const newQRow = rawCb.closest('tr');
+                                        newQRow.style.animation = "pulse-glow 2s infinite";
+                                        
+                                        if(!document.getElementById("pulse-glow-style")) {
+                                            const gStyle = document.createElement("style");
+                                            gStyle.id = "pulse-glow-style";
+                                            gStyle.innerHTML = "@keyframes pulse-glow { 0% { box-shadow: 0 0 0px var(--accent-yellow); } 50% { box-shadow: inset 0 0 15px var(--accent-yellow); background: rgba(234, 179, 8, 0.1); } 100% { box-shadow: 0 0 0px var(--accent-yellow); } }";
+                                            document.head.appendChild(gStyle);
+                                        }
+                                    }
+                                }, 500);
                             }
                         } catch(e) {
                             console.error("Failed parsing UI message:", e);
@@ -451,10 +567,53 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (btnResumeApply) btnResumeApply.classList.add("hidden");
                     if (btnPauseApply) btnPauseApply.classList.add("hidden");
 
+                    if (window.sessionAppliedJobs && window.sessionAppliedJobs.length > 0) {
+                        try {
+                            const count = window.sessionAppliedJobs.length;
+                            await fetch("http://localhost:3000/api/record-applications", {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({ userId: window.USER_ID, appliedJobs: window.sessionAppliedJobs })
+                            });
+                            
+                            // Show congratulatory popup
+                            const overlay = document.createElement("div");
+                            overlay.style.position = "fixed";
+                            overlay.style.top = "0"; overlay.style.left = "0";
+                            overlay.style.width = "100%"; overlay.style.height = "100%";
+                            overlay.style.background = "rgba(0,0,0,0.85)";
+                            overlay.style.display = "flex";
+                            overlay.style.alignItems = "center"; overlay.style.justifyContent = "center";
+                            overlay.style.zIndex = "9999";
+                            
+                            const popup = document.createElement("div");
+                            popup.style.background = "#18181b"; // zinc-900
+                            popup.style.padding = "2.5rem";
+                            popup.style.borderRadius = "16px";
+                            popup.style.textAlign = "center";
+                            popup.style.border = "1px solid var(--accent-green)";
+                            popup.style.boxShadow = "0 20px 40px rgba(16, 185, 129, 0.2)";
+                            popup.style.maxWidth = "400px";
+                            
+                            popup.innerHTML = `
+                                <i data-lucide="party-popper" style="width: 56px; height: 56px; color: var(--accent-green); margin: 0 auto 1rem;"></i>
+                                <h2 style="color: white; margin-bottom: 0.5rem; font-size: 1.5rem;">Job Hunt Success!</h2>
+                                <p style="color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.5;">You successfully applied to <strong style="color: white; font-size: 1.2rem;">${count}</strong> jobs organically. They have been added to your primary dashboard!</p>
+                                <button class="btn-primary" style="width: 100%;" onclick="this.parentElement.parentElement.remove()">Keep Going</button>
+                            `;
+                            
+                            overlay.appendChild(popup);
+                            document.body.appendChild(overlay);
+                            lucide.createIcons();
+                            
+                            window.sessionAppliedJobs = [];
+                        } catch(e) {
+                            appendLog("Failed to record applications to database: " + e.message, "error");
+                        }
+                    }
+
                     if (currentContextFilename) {
-                        appendLog("Refreshing table to show new applied statuses...", "info");
-                        // We do not re-render the whole table here so row shifts aren't lost immediately,
-                        // unless we specifically want a fresh start. We're keeping DOM updates manual.
+                        appendLog("Finished processing current batch.", "info");
                     }
                 });
             } catch (error) {
